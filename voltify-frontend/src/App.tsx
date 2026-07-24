@@ -7,6 +7,7 @@ import Onboarding from './pages/onboarding'
 import Dashboard from './pages/Dashboard'
 import Leaderboard from './pages/Leaderboard'
 import Predictions from './pages/Predictions'
+import Shop from './pages/Shop'
 
 export default function App() {
   return (
@@ -20,6 +21,7 @@ export default function App() {
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/leaderboard" element={<Leaderboard />} />
         <Route path="/predictions" element={<Predictions />} />
+        <Route path="/shop" element={<Shop />} />
       </Routes>
     </BrowserRouter>
   )
