@@ -21,9 +21,16 @@ export default function Leaderboard() {
   useEffect(() => {
     async function loadLeaderboard() {
       if (user) {
-        try {
-          const [lbRes, cssRes, chalRes] = await Promise.all([
-            apiService.getLeaderboard(onboarding?.household_type || 'family'),
+          const rawHType = onboarding?.household_type || 'family';
+          let backendHType = 'family';
+          if (rawHType === '1_person' || rawHType === 'bachelor') backendHType = 'bachelor';
+          else if (rawHType === '2_people' || rawHType === '3_people' || rawHType === '4_people' || rawHType === 'family') backendHType = 'family';
+          else if (rawHType === '5_plus_people' || rawHType === 'large_family') backendHType = 'large_family';
+          else if (rawHType === 'organization') backendHType = 'organization';
+
+          try {
+            const [lbRes, cssRes, chalRes] = await Promise.all([
+            apiService.getLeaderboard(backendHType),
             apiService.getCSSRecommendations().catch(() => null),
             apiService.getGamificationChallenge().catch(() => null)
           ]);
