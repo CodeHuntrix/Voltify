@@ -8,6 +8,7 @@ import gamificationRoutes from './src/routes/gamificationRoutes.js';
 import leaderboardRoutes from './src/routes/leaderboardRoutes.js';
 import profileRoutes from './src/routes/profileRoutes.js';
 import settingsRoutes from './src/routes/settingsRoutes.js';
+import coachRoutes from './src/routes/coachRoutes.js';
 
 dotenv.config();
 
@@ -24,6 +25,7 @@ app.use('/api/gamification', gamificationRoutes);
 app.use('/api/leaderboard', leaderboardRoutes);
 app.use('/api/profile', profileRoutes);
 app.use('/api/settings', settingsRoutes);
+app.use('/api/coach', coachRoutes);
 
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date() });
