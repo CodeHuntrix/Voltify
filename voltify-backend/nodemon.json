@@ -1,0 +1,9 @@
+{
+  "watch": [
+    "src",
+    ".env",
+    "app.js",
+    "server.js"
+  ],
+  "ext": "js,json"
+}
