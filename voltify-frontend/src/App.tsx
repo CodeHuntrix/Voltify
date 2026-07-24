@@ -8,6 +8,7 @@ import Dashboard from './pages/Dashboard'
 import Leaderboard from './pages/Leaderboard'
 import Predictions from './pages/Predictions'
 import Shop from './pages/Shop'
+import Streak from './pages/Streak'
 
 export default function App() {
   return (
@@ -22,6 +23,7 @@ export default function App() {
         <Route path="/leaderboard" element={<Leaderboard />} />
         <Route path="/predictions" element={<Predictions />} />
         <Route path="/shop" element={<Shop />} />
+        <Route path="/streak" element={<Streak />} />
       </Routes>
     </BrowserRouter>
   )
