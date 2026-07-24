@@ -1,12 +1,22 @@
-import React from 'react'
+import { BrowserRouter, Routes, Route } from 'react-router-dom'
+import Landing from './pages/Landing'
+import Login from './pages/auth/Login'
+import Signup from './pages/auth/Signup'
+import VerifyOTP from './pages/auth/VerifyOTP'
+import Onboarding from './pages/onboarding'
+import Dashboard from './pages/Dashboard'
 
-function App() {
+export default function App() {
   return (
-    <div style={{ padding: '2rem', textAlign: 'center', fontFamily: 'sans-serif' }}>
-      <h1>Voltify</h1>
-      <p>Project codebase initialized successfully.</p>
-    </div>
+    <BrowserRouter>
+      <Routes>
+        <Route path="/" element={<Landing />} />
+        <Route path="/login" element={<Login />} />
+        <Route path="/signup" element={<Signup />} />
+        <Route path="/verify-otp" element={<VerifyOTP />} />
+        <Route path="/onboarding" element={<Onboarding />} />
+        <Route path="/dashboard" element={<Dashboard />} />
+      </Routes>
+    </BrowserRouter>
   )
 }
-
-export default App

@@ -1,22 +1,206 @@
-:root {
-  font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
-  line-height: 1.5;
-  font-weight: 400;
+/* src/index.css */
+@import "tailwindcss";
 
-  color-scheme: light dark;
-  color: rgba(255, 255, 255, 0.87);
-  background-color: #242424;
+@theme {
+  --color-volt-bg: #090e1a;
+  --color-volt-card: #111827;
+  --color-volt-border: #1f2937;
+  --color-volt-cyan: #06b6d4;
+  --color-volt-pink: #ec4899;
+  --color-volt-green: #10b981;
+  --color-volt-amber: #f59e0b;
+  --color-volt-red: #ef4444;
+  --color-volt-purple: #8b5cf6;
+  --color-volt-textPri: #f9fafb;
+  --color-volt-textSec: #9ca3af;
+  --color-volt-textMute: #6b7280;
 
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+  --color-tertiary-container: #10b981;
+  --color-surface-bright: #1c1c1c;
+  --color-surface: #0a0a0a;
+  --color-surface-container-high: #1c1c1c;
+  --color-on-surface: #ededed;
+  --color-outline-variant: #2a2a2a;
+  --color-surface-container-lowest: #000000;
+  --color-on-background: #ededed;
+  --color-primary-fixed: #0070f3;
+  --color-on-surface-variant: #888888;
+  --color-primary: #0070f3;
+  --color-inverse-primary: #3291ff;
+  --color-surface-container-low: #111111;
+  --color-inverse-surface: #ededed;
+  --color-tertiary: #10b981;
+  --color-surface-container-highest: #2a2a2a;
+  --color-outline: #333333;
+  --color-surface-dim: #0a0a0a;
+  --color-surface-variant: #1a1a1a;
+  --color-secondary: #666666;
+  --color-on-primary: #ffffff;
+  --color-surface-container: #111111;
+  --color-error: #e00;
+  --color-background: #0a0a0a;
+
+  --font-display: "Plus Jakarta Sans", sans-serif;
+  --font-body: "Inter", sans-serif;
+  --font-mono: "JetBrains Mono", monospace;
+  --font-headline: "Inter", sans-serif;
+
+  --shadow-cyan: 0 4px 20px rgba(6, 182, 212, 0.04);
+  --shadow-pink: 0 4px 20px rgba(236, 72, 153, 0.04);
+  --shadow-green: 0 4px 20px rgba(16, 185, 129, 0.04);
+  --shadow-card: 0 10px 30px rgba(0, 0, 0, 0.2);
+
+  --animate-pulse-cyan: pulse-cyan 2s cubic-bezier(0.4,0,0.6,1) infinite;
+  --animate-pulse-glow: pulse-glow 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  --animate-float: float 3s ease-in-out infinite;
+  --animate-float-slow: float 8s ease-in-out infinite;
+  --animate-slide-up: slide-up 0.3s ease-out;
+  --animate-coin-burst: coin-burst 0.6s ease-out forwards;
+}
+
+@keyframes pulse-cyan {
+  0%, 100% { opacity: 0.8; }
+  50% { opacity: 1; }
+}
+@keyframes pulse-glow {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.92; transform: scale(1.005); }
+}
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-8px); }
+}
+@keyframes slide-up {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes coin-burst {
+  0% { transform: scale(0) rotate(0deg); opacity: 1; }
+  100% { transform: scale(1.5) rotate(360deg); opacity: 0; }
+}
+
+/* Custom Base Layer styling */
+* {
+  box-sizing: border-box;
+}
+
+/* Hide number input spinners (arrows) globally */
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+input[type="number"] {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+
+html {
+  scroll-behavior: smooth;
 }
 
 body {
-  margin: 0;
-  display: flex;
-  place-items: center;
-  min-width: 320px;
+  background-color: #0a0a0a;
+  color: #ededed;
+  font-family: 'Inter', sans-serif;
+  -webkit-font-smoothing: antialiased;
   min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #333333;
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #444444;
+}
+
+/* Glass card effect replaced with SaaS flat panel styling */
+.glass {
+  background: #111111;
+  border: 1px solid #2a2a2a;
+}
+
+.glass-hover {
+  transition: all 0.2s ease;
+}
+.glass-hover:hover {
+  border-color: #444444;
+  background: #151515;
+}
+
+.glass-card {
+  background: #111111;
+  border: 1px solid #2a2a2a;
+  border-radius: 12px;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Glowing text colors (simplified to clean colors) */
+.text-neon-cyan {
+  color: #06b6d4;
+}
+.text-neon-pink {
+  color: #ec4899;
+}
+.text-neon-green {
+  color: #10b981;
+}
+
+/* Premium gradient text utility */
+.text-gradient {
+  color: #ededed;
+}
+
+/* Tech grid graphic layout overlay - cleaned */
+.grid-bg {
+  background: transparent;
+}
+
+.estimated-label {
+  font-size: 0.65rem;
+  color: #f59e0b;
+  letter-spacing: 0.08em;
+}
+
+/* Recharts custom styling overlays */
+.recharts-cartesian-grid-horizontal line,
+.recharts-cartesian-grid-vertical line {
+  stroke: rgba(255, 255, 255, 0.03) !important;
+}
+.recharts-tooltip-wrapper {
+  outline: none !important;
+}
+
+/* Custom float animations */
+.animate-float {
+  animation: float 5s ease-in-out infinite;
+}
+.animate-float-delayed {
+  animation: float 5s ease-in-out 2.5s infinite;
+}
+.animate-float-slow {
+  animation: float 8s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, ::before, ::after {
+    animation-delay: -1ms !important;
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+    background-attachment: scroll !important;
+    scroll-behavior: auto !important;
+    transition-delay: 0s !important;
+    transition-duration: 0s !important;
+  }
 }
