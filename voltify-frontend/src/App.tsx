@@ -13,6 +13,7 @@ import Shop from './pages/Shop'
 import Streak from './pages/Streak'
 import AppLayout from './components/layout/AppLayout'
 import Notifications from './pages/Notifications'
+import OAuthSuccess from './pages/auth/OAuthSuccess'
 
 export default function App() {
   return (
@@ -23,6 +24,7 @@ export default function App() {
         <Route path="/signup" element={<Signup />} />
         <Route path="/verify-otp" element={<VerifyOTP />} />
         <Route path="/onboarding" element={<Onboarding />} />
+        <Route path="/oauth-success" element={<OAuthSuccess />} />
         
         {/* Protected Dashboard Layout Routes */}
         <Route element={<AppLayout />}>
