@@ -1,17 +1,65 @@
-export const getLeaderboard = async (req, res) => {
-  const { type } = req.params;
-  
-  const rankings = [
-    { rank: 1, name: 'Ananya Sharma', coins: 450, streak: 12, savings_pct: 18, rank_change: 0, is_current_user: false },
-    { rank: 2, name: 'Vikram Singh', coins: 380, streak: 9, savings_pct: 15, rank_change: 1, is_current_user: false },
-    { rank: 3, name: 'Ravi Kumar', coins: 250, streak: 7, savings_pct: 12, rank_change: -1, is_current_user: true },
-    { rank: 4, name: 'Priya Patel', coins: 180, streak: 4, savings_pct: 9, rank_change: 0, is_current_user: false }
-  ];
+const pool = require('../config/db');
+const { mockLeaderboardUsers } = require('../utils/mockData');
 
-  res.json({
+/**
+ * GET /api/leaderboard/:type?period=weekly|alltime
+ */
+const getLeaderboard = async (req, res) => {
+  const { type } = req.params;
+  const { period = 'weekly' } = req.query;
+  const userId = req.user.id;
+
+  const validTypes = ['bachelor', 'family', 'large_family', 'organization'];
+  if (!validTypes.includes(type)) {
+    return res.status(400).json({ error: `type must be one of: ${validTypes.join(', ')}` });
+  }
+
+  const realUsersResult = await pool.query(
+    `SELECT
+       u.id,
+       u.name,
+       u.coins,
+       u.streak_days,
+       (SELECT bill_amount FROM monthly_bills WHERE user_id = u.id ORDER BY month DESC LIMIT 1) AS last_bill
+     FROM users u
+     WHERE u.household_type = $1
+       AND u.onboarding_complete = TRUE`,
+    [type]
+  );
+
+  const realEntries = realUsersResult.rows.map(u => {
+    const savingsPct = 5 + Math.floor(u.coins / 100);
+    return {
+      id: u.id,
+      name: u.name,
+      coins: u.coins,
+      streak_days: u.streak_days,
+      savings_pct: Math.min(25, savingsPct),
+      rank_change: 0,
+      is_current_user: u.id === userId,
+    };
+  });
+
+  const mockEntries = (mockLeaderboardUsers[type] || []).map(m => ({
+    ...m,
+    is_current_user: false,
+  }));
+
+  const combined = [...realEntries, ...mockEntries]
+    .sort((a, b) => b.coins - a.coins)
+    .map((entry, index) => ({
+      ...entry,
+      rank: index + 1,
+    }));
+
+  const userRank = combined.find(e => e.is_current_user);
+
+  return res.status(200).json({
     type,
-    period: 'weekly',
-    rankings,
-    user_rank: { rank: 3, rank_change: -1 }
+    period,
+    rankings: combined,
+    user_rank: userRank ? { rank: userRank.rank, rank_change: userRank.rank_change } : null,
   });
 };
+
+module.exports = { getLeaderboard };
