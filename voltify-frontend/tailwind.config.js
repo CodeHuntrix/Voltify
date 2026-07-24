@@ -19,6 +19,7 @@ export default {
           textSec:  '#94a3b8',
           textMute: '#475569',
         },
+        // MD3 style premium theme colors from mockup
         "tertiary-container": "#23ebb8",
         "surface-bright": "#353a3f",
         "secondary-fixed-dim": "#cdbdff",
@@ -97,21 +98,21 @@ export default {
         },
         'pulse-glow': {
           '0%, 100%': { opacity: 1, transform: 'scale(1)' },
-          '50%':     { opacity: 0.92, transform: 'scale(1.005)' },
+          '50%': { opacity: .92, transform: 'scale(1.005)' },
         },
         'float': {
-          '0%, 100%': { transform: 'y-0' },
+          '0%,100%': { transform: 'translateY(0px)' },
           '50%':     { transform: 'translateY(-8px)' },
         },
         'slide-up': {
-          'from': { opacity: 0, transform: 'translateY(10px)' },
-          'to':   { opacity: 1, transform: 'translateY(0)' },
+          from: { opacity: '0', transform: 'translateY(10px)' },
+          to:   { opacity: '1', transform: 'translateY(0)' },
         },
         'coin-burst': {
-          '0%':   { transform: 'scale(0) rotate(0deg)', opacity: 1 },
-          '100%': { transform: 'scale(1.5) rotate(360deg)', opacity: 0 },
-        }
-      }
+          '0%':   { transform: 'scale(0) rotate(0deg)', opacity: '1' },
+          '100%': { transform: 'scale(1.5) rotate(360deg)', opacity: '0' },
+        },
+      },
     },
   },
   plugins: [],
