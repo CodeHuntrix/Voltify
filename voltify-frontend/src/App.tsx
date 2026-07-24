@@ -12,6 +12,7 @@ import Predictions from './pages/Predictions'
 import Shop from './pages/Shop'
 import Streak from './pages/Streak'
 import AppLayout from './components/layout/AppLayout'
+import Notifications from './pages/Notifications'
 
 export default function App() {
   return (
@@ -32,6 +33,7 @@ export default function App() {
           <Route path="/streak" element={<Streak />} />
           <Route path="/settings" element={<Settings />} />
           <Route path="/profile" element={<Profile />} />
+          <Route path="/notifications" element={<Notifications />} />
         </Route>
       </Routes>
     </BrowserRouter>
