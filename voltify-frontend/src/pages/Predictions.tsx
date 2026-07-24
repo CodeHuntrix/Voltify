@@ -7,17 +7,20 @@ import {
 import GlassCard from '../components/ui/GlassCard';
 import { apiService } from '../lib/api';
 import { toast } from 'react-toastify';
+import { useGamificationStore } from '../store/gamificationStore';
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid,
   Tooltip, ResponsiveContainer
 } from 'recharts';
 
 export default function Predictions() {
+  const { addCoins } = useGamificationStore();
   const [recommendations, setRecommendations] = useState<any[]>([]);
   const [totals, setTotals] = useState<any>({ potential: 1020, annual: 12240 });
   const [chartData, setChartData] = useState<any[]>([]);
   const [predictions, setPredictions] = useState<any>({ tomorrow: 12.4, next_week: 85.0, next_month: 340.0 });
   const [billShock, setBillShock] = useState<any>({ risk: 'LOW', probability: 24, projected_bill: 2450 });
+  const [activeChallenge, setActiveChallenge] = useState<any>(null);
   
   // What-If Simulation State
   const [simAppliance, setSimAppliance] = useState('Air Conditioner');
@@ -44,27 +47,31 @@ export default function Predictions() {
   useEffect(() => {
     async function loadPredictionsData() {
       try {
-        const [cssRes, chartRes, predRes] = await Promise.all([
+        const [cssRes, chartRes, predRes, chalRes] = await Promise.all([
           apiService.getCSSRecommendations(),
           apiService.getActualVsPredicted(),
-          apiService.getCoachPredictions()
+          apiService.getCoachPredictions(),
+          apiService.getGamificationChallenge().catch(() => null)
         ]);
 
-        if (cssRes.recommendations) {
+        if (cssRes?.recommendations) {
           setRecommendations(cssRes.recommendations);
           setTotals({
             potential: cssRes.total_potential_savings_rs || 1020,
             annual: cssRes.total_annual_savings_rs || 12240
           });
         }
-        if (chartRes.data) {
+        if (chartRes?.data) {
           setChartData(chartRes.data);
         }
-        if (predRes.predictions) {
+        if (predRes?.predictions) {
           setPredictions(predRes.predictions);
         }
-        if (predRes.bill_shock) {
+        if (predRes?.bill_shock) {
           setBillShock(predRes.bill_shock);
+        }
+        if (chalRes?.challenge) {
+          setActiveChallenge(chalRes.challenge);
         }
       } catch (err) {
         console.error("Failed to load energy predictions and recommendations", err);
@@ -92,6 +99,7 @@ export default function Predictions() {
         setRecommendations(prev => 
           prev.map(r => r.id === recId ? { ...r, already_applied: true } : r)
         );
+        addCoins(res.coins_earned || 80);
       }
     } catch (err: any) {
       toast.error(err.message || "Failed to apply optimization target");
@@ -101,7 +109,6 @@ export default function Predictions() {
   const handleSimulate = async () => {
     setSimLoading(true);
     try {
-      // Force change_type according to catalog mapping
       const changeType = simInfo.control_type;
       const res = await apiService.getWhatIf(simAppliance, changeType, simValue);
       setSimResult(res);
@@ -113,7 +120,6 @@ export default function Predictions() {
     }
   };
 
-  // Safely extract units from prediction objects to prevent rendering crashes
   const getUnits = (val: any) => {
     if (!val) return 0;
     if (typeof val === 'object' && 'units' in val) {
@@ -122,7 +128,6 @@ export default function Predictions() {
     return typeof val === 'number' ? val : 0;
   };
 
-  // Safe helper to resolve appliance emojis
   const getApplianceEmoji = (appliance: string) => {
     switch (appliance?.toUpperCase()) {
       case 'AC': return '❄️';
@@ -307,7 +312,7 @@ export default function Predictions() {
 
             <div>
               <label className="block text-[10px] font-semibold text-gray-400 mb-1.5 uppercase tracking-wider font-sans">Adjustment Lever</label>
-              <div className="px-3 py-2 bg-slate-900 border border-slate-800 rounded-lg text-xs text-primary font-bold">
+              <div className="px-3 py-2 bg-slate-900 border border-slate-800 rounded-lg text-xs text-primary font-bold font-sans">
                 {simInfo.label}
               </div>
             </div>
@@ -315,7 +320,6 @@ export default function Predictions() {
             <div>
               <label htmlFor="sim_value_input" className="block text-[10px] font-semibold text-gray-400 mb-1.5 uppercase tracking-wider font-sans">Value ({simInfo.unit})</label>
               {simInfo.control_type === 'temperature' ? (
-                /* AC temperature slider: 16°C to 30°C in steps of 1°C */
                 <div className="flex items-center gap-3">
                   <input
                     id="sim_value_input"
@@ -332,7 +336,6 @@ export default function Predictions() {
                   </span>
                 </div>
               ) : simInfo.control_type === 'schedule' ? (
-                /* Geyser usage window selector (shift heating hours) */
                 <select
                   id="sim_value_input"
                   value={simValue}
@@ -344,7 +347,6 @@ export default function Predictions() {
                   <option value="3">Shift 3 hrs (Midnight slots)</option>
                 </select>
               ) : (
-                /* Hours-per-day slider: 0-24 bounds with appliance step sizes */
                 <div className="flex items-center gap-3">
                   <input
                     id="sim_value_input"
@@ -397,12 +399,12 @@ export default function Predictions() {
             <div className="p-5 rounded-xl border border-amber-500/20 bg-amber-500/5 text-center text-xs space-y-2">
               <span className="block font-semibold text-white font-sans">⚠️ Simulation Unavailable</span>
               <span className="block text-gray-400 font-sans leading-relaxed">
-                To run this simulation, you must first add a <strong className="font-semibold text-white">{simAppliance}</strong> to your household configuration! You can configure your appliances by resetting calibration in Settings.
+                To run this simulation, you must first add a <strong className="font-semibold text-white">{simAppliance}</strong> to your household configuration!
               </span>
             </div>
           ) : (
             <div className="h-32 flex items-center justify-center border border-white/5 rounded-2xl bg-white/[0.01]">
-              <span className="text-xs text-gray-500">Configuring simulation forecasts...</span>
+              <span className="text-xs text-gray-500 font-sans">Configuring simulation forecasts...</span>
             </div>
           )}
         </GlassCard>
