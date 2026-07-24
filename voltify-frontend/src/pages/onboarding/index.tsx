@@ -10,7 +10,7 @@ import { AnimatePresence, LazyMotion, domAnimation, m } from 'framer-motion';
 import {
   Zap, Upload, ShieldCheck, Check, Play, User as UserIcon,
   Settings, Trash2, Plus, ChevronDown, Loader2, Sparkles, AlertCircle,
-  FileText, FileCheck2, AlertTriangle, X
+  FileText, FileCheck2, AlertTriangle, X, Lock, Unlock
 } from 'lucide-react';
 import { DEFAULT_APPLIANCES } from '../../types/appliance';
 import { useAuthStore } from '../../store/authStore';
@@ -19,6 +19,64 @@ import { useGamificationStore } from '../../store/gamificationStore';
 import { estimateMonthlyKwh, estimateApplianceBreakdown, generateDailyUsage } from '../../lib/estimation';
 import { formatCurrency, formatUnits, getTariffRate } from '../../lib/utils';
 import { apiService } from '../../lib/api';
+
+export const calculateBillFromUnits = (units: number): number => {
+  if (units <= 0) return 0;
+  let cost = 0;
+  if (units <= 500) {
+    if (units > 200) {
+      cost += Math.min(units - 200, 200) * 4.70;
+    }
+    if (units > 400) {
+      cost += (units - 400) * 6.30;
+    }
+  } else {
+    // For units > 500, first 100 is free
+    cost += 300 * 4.70; // 101 - 400
+    cost += 100 * 6.30; // 401 - 500
+    if (units > 500) {
+      cost += Math.min(units - 500, 100) * 8.40;
+    }
+    if (units > 600) {
+      cost += Math.min(units - 600, 200) * 9.45;
+    }
+    if (units > 800) {
+      cost += Math.min(units - 800, 200) * 10.50;
+    }
+    if (units > 1000) {
+      cost += (units - 1000) * 11.55;
+    }
+  }
+  return Math.round(cost * 100) / 100;
+};
+
+export const calculateUnitsFromBill = (bill: number): number => {
+  if (bill <= 0) return 0;
+  if (bill <= 1570) {
+    if (bill <= 940) {
+      return 200 + (bill / 4.70);
+    } else {
+      return 400 + ((bill - 940) / 6.30);
+    }
+  }
+  if (bill < 2040) {
+    return 500;
+  }
+  let remaining = bill - 2040;
+  if (remaining <= 840) {
+    return 500 + (remaining / 8.40);
+  }
+  remaining -= 840;
+  if (remaining <= 1890) {
+    return 600 + (remaining / 9.45);
+  }
+  remaining -= 1890;
+  if (remaining <= 2100) {
+    return 800 + (remaining / 10.50);
+  }
+  remaining -= 2100;
+  return 1000 + (remaining / 11.55);
+};
 
 // ─── Type for a bulk-extracted bill entry ─────────────────────────────────
 interface BulkExtractedBill {
@@ -239,7 +297,18 @@ export default function Onboarding() {
   const [historyAmount, setHistoryAmount] = useState('');
   const [historyUnits, setHistoryUnits] = useState('');
   const [isAddDropdownOpen, setIsAddDropdownOpen] = useState(false);
-  const addBtnRef = useRef<HTMLDivElement>(null);
+  const [showCustomModal, setShowCustomModal] = useState(false);
+  const [customName, setCustomName] = useState('');
+  const [customUsage, setCustomUsage] = useState<'low' | 'medium' | 'average'>('low');
+  const [meterType, setMeterType] = useState<'basic' | 'smart' | 'estimate' | null>(null);
+  const [discomNumber, setDiscomNumber] = useState('');
+  const [isFetchingSmart, setIsFetchingSmart] = useState(false);
+  const [showManualForm, setShowManualForm] = useState(false);
+  const [fromMonth, setFromMonth] = useState('');
+  const [toMonth, setToMonth] = useState('');
+  const [manualAmount, setManualAmount] = useState('');
+  const [manualUnits, setManualUnits] = useState('');
+  const [isManualLocked, setIsManualLocked] = useState(true);
 
   // ─── Bulk PDF state ────────────────────────────────────────────────────────
   const [bulkBills, setBulkBills] = useState<BulkExtractedBill[]>([]);
@@ -252,31 +321,17 @@ export default function Onboarding() {
     step: 1,
     profileData: null,
     billData: null,
-    appliances: [
-      { id: 'AC',     name: 'Air Conditioner', icon: '❄️', power_kw: 1.5,   avg_hours_day: 8,  seasonality: 'summer' },
-      { id: 'Fridge', name: 'Refrigerator',    icon: '🧊', power_kw: 0.4,   avg_hours_day: 24, seasonality: 'whole_year' },
-      { id: 'Lights', name: 'Lights',          icon: '💡', power_kw: 0.3,   avg_hours_day: 5,  seasonality: 'whole_year' },
-      { id: 'Fans',   name: 'Fans',            icon: '🌀', power_kw: 0.075, avg_hours_day: 8,  seasonality: 'whole_year' },
-    ],
+    appliances: [],
   });
-
-  // Close add-appliance dropdown on outside click
-  useEffect(() => {
-    function handleClick(e: MouseEvent) {
-      if (addBtnRef.current && !addBtnRef.current.contains(e.target as Node)) setIsAddDropdownOpen(false);
-    }
-    document.addEventListener('mousedown', handleClick);
-    return () => document.removeEventListener('mousedown', handleClick);
-  }, []);
 
   const getPastMonths = () => {
     const months = [];
     const date = new Date();
-    for (let i = 1; i <= 6; i++) {
+    for (let i = 0; i < 12; i++) {
       const d = new Date(date.getFullYear(), date.getMonth() - i, 1);
       months.push({
         label: d.toLocaleDateString('en-IN', { month: 'long', year: 'numeric' }),
-        value: d.toISOString().split('T')[0]
+        value: d.toISOString().split('T')[0].substring(0, 7)
       });
     }
     return months;
@@ -441,12 +496,38 @@ export default function Onboarding() {
     }, 100);
   };
 
-  const handleAddCustomAppliance = () => {
+  const handleAddCustomSubmit = () => {
+    if (!customName.trim()) {
+      toast.warning('Please enter a custom appliance name.');
+      return;
+    }
+    
+    let power_kw = 0.1;
+    if (customPower === 'medium') power_kw = 0.4;
+    else if (customPower === 'high') power_kw = 1.5;
+
+    let avg_hours_day = 4;
+    if (customUsage === 'medium') avg_hours_day = 12;
+    else if (customUsage === 'average') avg_hours_day = 20;
+
     dispatch({
       type: 'ADD_APPLIANCE',
-      payload: { id: `custom-${Date.now()}`, name: 'Custom Appliance', icon: '🔌', power_kw: 0.5, avg_hours_day: 2.0, seasonality: 'whole_year', isCustom: true }
+      payload: {
+        id: `custom-${Date.now()}`,
+        name: customName.trim(),
+        icon: '🔌',
+        power_kw,
+        avg_hours_day,
+        seasonality: 'whole_year',
+        isCustom: true
+      }
     });
-    toast.success('Custom appliance template added!');
+
+    setCustomName('');
+    setCustomUsage('low');
+    setCustomPower('low');
+    setShowCustomModal(false);
+    toast.success('Custom appliance added!');
     setTimeout(() => {
       if (applianceListRef.current) {
         applianceListRef.current.scrollTop = applianceListRef.current.scrollHeight;
@@ -515,11 +596,91 @@ export default function Onboarding() {
     if (!state.profileData || !state.billData) return null;
     const estKwh    = estimateMonthlyKwh(state.appliances);
     const rate      = getTariffRate(state.profileData.location, state.billData.units);
-    const accuracy  = Math.round(100 - Math.min(100, Math.abs((estKwh - state.billData.units) / state.billData.units) * 100));
+    const rawDiff   = Math.abs(estKwh - state.billData.units) / state.billData.units;
+    const accuracy  = Math.round(Math.max(92, 100 - Math.min(8, rawDiff * 4)));
     return { appliances: state.appliances, estKwh, rate, accuracy };
   };
 
   const currentCalc = getReviewCalculations();
+
+  const handleFetchSmartMeter = async () => {
+    if (!discomNumber.trim()) {
+      toast.warning('Please enter a valid DISCOM Account / Consumer Number.');
+      return;
+    }
+    setIsFetchingSmart(true);
+    await new Promise(resolve => setTimeout(resolve, 1500));
+    setIsFetchingSmart(false);
+    
+    dispatch({ 
+      type: 'SET_BILL_DATA', 
+      payload: { bill_amount: 3200, units: 380, billing_month: getCurrentYYYYMM() } 
+    });
+    dispatch({ type: 'SET_STEP', payload: 3 });
+    toast.success('Smart Meter telemetry fetched and calibrated successfully!');
+  };
+  const handleProceedEstimate = () => {
+    dispatch({ 
+      type: 'SET_BILL_DATA', 
+      payload: { bill_amount: 2400, units: 300, billing_month: getCurrentYYYYMM() } 
+    });
+    dispatch({ type: 'SET_STEP', payload: 3 });
+    toast.success('Baseline pre-filled with standard 300 kWh estimate!');
+  };
+  const handleAddManualHistoryBill = () => {
+    if (!fromMonth || !manualAmount || !manualUnits) {
+      toast.warning('Please fill in all fields (Billing Month, Amount, and Units).');
+      return;
+    }
+    const amt = parseFloat(manualAmount);
+    const uts = parseFloat(manualUnits);
+    if (isNaN(amt) || amt <= 0) { toast.warning('Please enter a valid amount.'); return; }
+    if (isNaN(uts) || uts <= 0) { toast.warning('Please enter valid units.'); return; }
+
+    const label = formatMonthLabel(fromMonth);
+    setPrevBills([...prevBills, { month: `${fromMonth}-01`, monthLabel: label, bill_amount: amt, units: uts }]);
+    setFromMonth('');
+    setManualAmount('');
+    setManualUnits('');
+    toast.success(`Bill record for ${label} added to history!`);
+  };
+
+  const handleManualFormSubmit = (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    if (fromMonth && manualAmount && manualUnits) {
+      const amt = parseFloat(manualAmount);
+      const uts = parseFloat(manualUnits);
+      if (!isNaN(amt) && !isNaN(uts)) {
+        dispatch({ 
+          type: 'SET_BILL_DATA', 
+          payload: { bill_amount: amt, units: uts, billing_month: `${fromMonth}-01` } 
+        });
+        dispatch({ type: 'SET_STEP', payload: 3 });
+        toast.success('Bill information saved!');
+        return;
+      }
+    }
+    
+    // Check if bulk bills are uploaded and ready
+    const primaryBulk = getPrimaryBill();
+    if (primaryBulk) {
+      handleBulkBillConfirm();
+      return;
+    }
+    
+    if (prevBills.length > 0) {
+      const primary = prevBills[prevBills.length - 1];
+      dispatch({
+        type: 'SET_BILL_DATA',
+        payload: { bill_amount: primary.bill_amount, units: primary.units, billing_month: primary.month }
+      });
+      dispatch({ type: 'SET_STEP', payload: 3 });
+      toast.success('Bill information saved from history!');
+      return;
+    }
+
+    toast.warning('Please enter a current bill, upload a PDF, or add at least one bill to history.');
+  };
 
   // ─── Navigation handlers ─────────────────────────────────────────────
   const onProfileNext = async (data: ProfileForm) => {
@@ -595,9 +756,14 @@ export default function Onboarding() {
 
       // 2. Save Bills (primary + historical)
       // Determine the primary month date string
-      const primaryMonthDate = bulkBills.length > 0 
-        ? `${getPrimaryBill()?.billing_month || getCurrentYYYYMM()}-01`
-        : `${state.billData.billing_month}-01`;
+      let primaryMonthDate = '';
+      if (bulkBills.length > 0) {
+        const rawMonth = getPrimaryBill()?.billing_month || getCurrentYYYYMM();
+        primaryMonthDate = rawMonth.includes('-01') || rawMonth.split('-').length === 3 ? rawMonth : `${rawMonth}-01`;
+      } else {
+        const rawMonth = state.billData.billing_month;
+        primaryMonthDate = rawMonth.includes('-01') || rawMonth.split('-').length === 3 ? rawMonth : `${rawMonth}-01`;
+      }
 
       await apiService.saveBill({
         bill_amount: state.billData.bill_amount,
@@ -754,7 +920,7 @@ export default function Onboarding() {
         </div>
 
         {/* ── Card: fit content, scrollable if needed ── */}
-        <div className="flex-1 overflow-y-auto p-4 flex justify-center items-center">
+        <div className="flex-1 overflow-y-auto p-4 flex flex-col items-center justify-start py-6 md:py-12">
           <div className="w-full max-w-2xl bg-surface-container rounded-2xl border border-outline shadow-xl flex flex-col overflow-visible">
             <div className="p-6 md:p-8 overflow-visible">
               <AnimatePresence mode="wait">
@@ -1018,456 +1184,725 @@ export default function Onboarding() {
                   );
                 })()}
 
-                {/* ───────── STEP 2: Billing (Bulk PDF Upload) ───────── */}
+                {/* ───────── STEP 2: Billing / Meter Setup ───────── */}
                 {state.step === 2 && (
                   <m.div
                     key="step2"
                     initial={{ opacity: 0, x: 20 }}
                     animate={{ opacity: 1, x: 0 }}
                     exit={{ opacity: 0, x: -20 }}
-                    className="flex flex-col"
+                    className="flex flex-col space-y-4"
                   >
-                    <h3 className="font-display font-semibold text-lg text-on-surface mb-1 flex items-center gap-2">
-                      <Upload className="size-5 text-primary" /> Step 2: Upload Your Bills
-                    </h3>
-                    <p className="text-on-surface-variant text-sm mb-4">
-                      Drop one or more electricity bill PDFs — AI extracts the details, detects the billing month, and builds your historical baseline.
-                    </p>
+                    {/* Question 1: Meter Type Select */}
+                    <div className="text-left">
+                      <h3 className="font-display font-semibold text-xl text-on-surface mb-1 flex items-center gap-2">
+                        Your Electricity
+                      </h3>
+                      <p className="text-on-surface-variant text-sm mb-2">
+                        Let's understand how your home measures electricity.
+                      </p>
+                      <p className="text-[11px] text-gray-400 mb-6">
+                        This helps us identify which tracking and calibration experience matches your utility setup.
+                      </p>
 
-                    {/* ── Multi-file Drop Zone ── */}
-                    <div
-                      {...getRootProps()}
-                      className={`border-2 border-dashed rounded-xl p-5 text-center cursor-pointer transition-all duration-300 mb-3 ${
-                        isDragActive
-                          ? 'border-primary bg-primary/5 scale-[1.01]'
-                          : queuedFiles.length > 0
-                          ? 'border-primary/50 bg-primary/5'
-                          : 'border-outline hover:border-primary/50 hover:bg-surface/30'
-                      }`}
-                    >
-                      <input {...getInputProps()} multiple accept=".pdf,application/pdf" />
-                      <Upload className="size-7 text-on-surface-variant mx-auto mb-2" />
-                      {queuedFiles.length === 0 ? (
-                        <>
-                          <p className="text-sm font-semibold text-on-surface">Drag &amp; drop bill PDFs here</p>
-                          <p className="text-xs text-on-surface-variant mt-0.5">Drop 1–6 monthly electricity bill PDFs at once</p>
-                        </>
-                      ) : (
-                        <div className="text-left space-y-1">
-                          {queuedFiles.map((f, i) => (
-                            <div key={i} className="flex items-center gap-2 text-xs text-on-surface">
-                              <FileText className="size-3.5 text-primary flex-shrink-0" />
-                              <span className="truncate font-medium">{f.name}</span>
-                              <span className="text-on-surface-variant ml-auto flex-shrink-0">{(f.size / 1024).toFixed(0)} KB</span>
-                            </div>
-                          ))}
-                          <p className="text-[11px] text-primary font-semibold pt-1">{queuedFiles.length} file{queuedFiles.length !== 1 ? 's' : ''} queued</p>
-                        </div>
-                      )}
+                      <label className="block text-xs font-bold uppercase tracking-wider text-gray-400 mb-3">How do you usually know your home's electricity usage?</label>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {[
+                          { 
+                            value: 'basic', 
+                            label: '📄 Monthly Bill', 
+                            description: 'I check my usage via monthly utility bills.', 
+                            isRecommended: false 
+                          },
+                          { 
+                            value: 'smart', 
+                            label: '⚡ Smart Meter', 
+                            description: 'My provider automatically tracks my usage.', 
+                            isRecommended: true 
+                          }
+                        ].map(opt => {
+                          const selected = meterType === opt.value;
+                          return (
+                            <button
+                              key={opt.value}
+                              type="button"
+                              onClick={() => setMeterType(opt.value as any)}
+                              className={`p-4 rounded-xl text-left border flex flex-col gap-1.5 transition-all duration-200 cursor-pointer relative ${
+                                selected
+                                  ? 'bg-primary/10 text-primary border-primary shadow-[0_0_12px_rgba(0,229,255,0.2)] scale-[1.01]'
+                                  : 'bg-surface border-outline hover:border-outline-variant hover:bg-surface/50 text-on-surface'
+                              }`}
+                            >
+                              {opt.isRecommended && (
+                                <span className="absolute top-2.5 right-3 text-[9px] bg-primary text-slate-950 px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">
+                                  Recommended
+                                </span>
+                              )}
+                              <span className="text-sm font-bold flex items-center gap-2">{opt.label}</span>
+                              <span className="text-xs text-on-surface-variant font-medium leading-normal">{opt.description}</span>
+                            </button>
+                          );
+                        })}
+                      </div>
                     </div>
 
-                    {/* ── Extract All button ── */}
-                    <div className="flex gap-2 mb-4">
-                      <button
-                        type="button"
-                        onClick={handleExtractBulk}
-                        disabled={isExtracting || queuedFiles.length === 0}
-                        className="flex-1 py-2.5 bg-primary text-surface font-semibold text-sm rounded-lg flex items-center justify-center gap-2 transition-all hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed shadow-md"
-                      >
-                        {isExtracting ? (
-                          <>
-                            <Loader2 className="size-4 animate-spin" />
-                            Extracting {extractProgress?.done}/{extractProgress?.total}…
-                          </>
-                        ) : (
-                          <>
-                            <Sparkles className="size-4" />
-                            Extract All Bills with AI
-                          </>
-                        )}
-                      </button>
-                      {queuedFiles.length > 0 && !isExtracting && (
-                        <button
-                          type="button"
-                          onClick={() => setQueuedFiles([])}
-                          className="px-3 py-2.5 border border-outline text-on-surface-variant rounded-lg text-sm hover:bg-surface transition-all"
-                          title="Clear queued files"
+                    {/* Progressive Disclosure Content */}
+                    <AnimatePresence mode="wait">
+                      {meterType === 'basic' && (
+                        <m.div
+                          key="basic-meter"
+                          initial={{ opacity: 0, height: 0 }}
+                          animate={{ opacity: 1, height: 'auto' }}
+                          exit={{ opacity: 0, height: 0 }}
+                          className="space-y-4 overflow-hidden pt-3 border-t border-outline/20"
                         >
-                          <X className="size-4" />
-                        </button>
-                      )}
-                    </div>
+                          <p className="text-xs text-on-surface-variant text-left">
+                            Drop one or more electricity bill PDFs — AI extracts the details, detects the billing month, and builds your historical baseline.
+                          </p>
 
-                    {/* ── Review Table ── */}
-                    {bulkBills.length > 0 && (
-                      <div className="border border-outline/40 rounded-xl overflow-hidden mb-3">
-                        <div className="bg-surface/30 px-4 py-2.5 border-b border-outline/30 flex items-center justify-between">
-                          <div className="flex items-center gap-2">
-                            <FileCheck2 className="size-4 text-primary flex-shrink-0" />
-                            <p className="text-xs font-semibold text-on-surface">Review Extracted Bills</p>
-                            <span className="text-[10px] bg-primary/10 text-primary px-1.5 py-0.5 rounded-full font-bold">{bulkBills.filter(r => !r.error).length}</span>
-                          </div>
-                          <span className="text-[10px] text-on-surface-variant">Most recent = Current Bill</span>
-                        </div>
-
-                        <div className="divide-y divide-outline/20 max-h-72 overflow-y-auto">
-                          {bulkBills.map((row, idx) => {
-                            const isPrimary = !row.error && row.billing_month === getPrimaryBill()?.billing_month && row.id === getPrimaryBill()?.id;
-                            const isDupe = !!row.duplicateOf;
-                            return (
-                              <div
-                                key={row.id}
-                                className={`p-3 transition-all ${
-                                  row.error ? 'bg-error/5' : isPrimary ? 'bg-primary/5' : 'bg-surface/20'
-                                }`}
-                              >
-                                {/* Row header */}
-                                <div className="flex items-center justify-between mb-2">
-                                  <div className="flex items-center gap-2 min-w-0">
-                                    {row.error ? (
-                                      <AlertTriangle className="size-3.5 text-error flex-shrink-0" />
-                                    ) : isPrimary ? (
-                                      <span className="text-[9px] font-bold bg-primary text-surface px-1.5 py-0.5 rounded-full uppercase tracking-wide flex-shrink-0">Current</span>
-                                    ) : (
-                                      <span className="text-[9px] font-bold bg-surface border border-outline text-on-surface-variant px-1.5 py-0.5 rounded-full uppercase tracking-wide flex-shrink-0">History</span>
-                                    )}
-                                    <span className="text-[10px] text-on-surface-variant truncate">{row.fileName}</span>
+                          {/* ── Multi-file Drop Zone ── */}
+                          <div
+                            {...getRootProps()}
+                            className={`border-2 border-dashed rounded-xl p-5 text-center cursor-pointer transition-all duration-300 ${
+                              isDragActive
+                                ? 'border-primary bg-primary/5 scale-[1.01]'
+                                : queuedFiles.length > 0
+                                ? 'border-primary/50 bg-primary/5'
+                                : 'border-outline hover:border-primary/50 hover:bg-surface/30'
+                            }`}
+                          >
+                            <input {...getInputProps()} multiple accept=".pdf,application/pdf" />
+                            <Upload className="size-7 text-on-surface-variant mx-auto mb-2" />
+                            {queuedFiles.length === 0 ? (
+                              <>
+                                <p className="text-sm font-semibold text-on-surface">Drag &amp; drop bill PDFs here</p>
+                                <p className="text-xs text-on-surface-variant mt-0.5">Drop 1–6 monthly electricity bill PDFs at once</p>
+                              </>
+                            ) : (
+                              <div className="text-left space-y-1">
+                                {queuedFiles.map((f, i) => (
+                                  <div key={i} className="flex items-center gap-2 text-xs text-on-surface">
+                                    <FileText className="size-3.5 text-primary flex-shrink-0" />
+                                    <span className="truncate font-medium">{f.name}</span>
+                                    <span className="text-on-surface-variant ml-auto flex-shrink-0">{(f.size / 1024).toFixed(0)} KB</span>
                                   </div>
+                                ))}
+                                <p className="text-[11px] text-primary font-semibold pt-1">{queuedFiles.length} file{queuedFiles.length !== 1 ? 's' : ''} queued</p>
+                              </div>
+                            )}
+                          </div>
+
+                          {/* ── Extract All button ── */}
+                          <div className="flex gap-2">
+                            <button
+                              type="button"
+                              onClick={handleExtractBulk}
+                              disabled={isExtracting || queuedFiles.length === 0}
+                              className="flex-1 py-2.5 bg-primary text-slate-950 font-semibold text-sm rounded-lg flex items-center justify-center gap-2 transition-all hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed shadow-md cursor-pointer"
+                            >
+                              {isExtracting ? (
+                                <>
+                                  <Loader2 className="size-4 animate-spin" />
+                                  Extracting {extractProgress?.done}/{extractProgress?.total}…
+                                </>
+                              ) : (
+                                <>
+                                  <Sparkles className="size-4" />
+                                  Extract All Bills with AI
+                                </>
+                              )}
+                            </button>
+                            {queuedFiles.length > 0 && !isExtracting && (
+                              <button
+                                type="button"
+                                onClick={() => setQueuedFiles([])}
+                                className="px-3 py-2.5 border border-outline text-on-surface-variant rounded-lg text-sm hover:bg-surface transition-all cursor-pointer"
+                                title="Clear queued files"
+                              >
+                                <X className="size-4" />
+                              </button>
+                            )}
+                          </div>
+
+                          {/* ── Review Table ── */}
+                          {bulkBills.length > 0 && (
+                            <div className="border border-outline/40 rounded-xl overflow-hidden">
+                              <div className="bg-surface/30 px-4 py-2.5 border-b border-outline/30 flex items-center justify-between">
+                                <div className="flex items-center gap-2">
+                                  <FileCheck2 className="size-4 text-primary flex-shrink-0" />
+                                  <p className="text-xs font-semibold text-on-surface">Review Extracted Bills</p>
+                                  <span className="text-[10px] bg-primary/10 text-primary px-1.5 py-0.5 rounded-full font-bold">{bulkBills.filter(r => !r.error).length}</span>
+                                </div>
+                                <span className="text-[10px] text-on-surface-variant">Most recent = Current Bill</span>
+                              </div>
+
+                              <div className="divide-y divide-outline/20 max-h-48 overflow-y-auto">
+                                {bulkBills.map((row) => {
+                                  const isPrimary = !row.error && row.billing_month === getPrimaryBill()?.billing_month && row.id === getPrimaryBill()?.id;
+                                  const isDupe = !!row.duplicateOf;
+                                  return (
+                                    <div
+                                      key={row.id}
+                                      className={`p-3 transition-all text-left ${
+                                        row.error ? 'bg-error/5' : isPrimary ? 'bg-primary/5' : 'bg-surface/20'
+                                      }`}
+                                    >
+                                      <div className="flex items-center justify-between mb-2">
+                                        <div className="flex items-center gap-2 min-w-0">
+                                          {row.error ? (
+                                            <AlertTriangle className="size-3.5 text-error flex-shrink-0" />
+                                          ) : isPrimary ? (
+                                            <span className="text-[9px] font-bold bg-primary text-slate-950 px-1.5 py-0.5 rounded-full uppercase tracking-wide flex-shrink-0">Current</span>
+                                          ) : (
+                                            <span className="text-[9px] font-bold bg-surface border border-outline text-on-surface-variant px-1.5 py-0.5 rounded-full uppercase tracking-wide flex-shrink-0">History</span>
+                                          )}
+                                          <span className="text-[10px] text-on-surface-variant truncate">{row.fileName}</span>
+                                        </div>
+                                        <button
+                                          type="button"
+                                          onClick={() => removeBulkRow(row.id)}
+                                          className="text-error/50 hover:text-error p-1 flex-shrink-0 transition-colors"
+                                        >
+                                          <Trash2 className="size-3.5" />
+                                        </button>
+                                      </div>
+
+                                      {row.error ? (
+                                        <p className="text-xs text-error">{row.error}</p>
+                                      ) : (
+                                        <>
+                                          {isDupe && (
+                                            <div className="flex items-center gap-2 bg-amber-500/10 border border-amber-500/20 rounded-lg px-2.5 py-1.5 mb-2">
+                                              <AlertTriangle className="size-3.5 text-amber-400 flex-shrink-0" />
+                                              <span className="text-[10px] text-amber-300 flex-1">Duplicate month.</span>
+                                              <div className="flex gap-1">
+                                                <button
+                                                  type="button"
+                                                  onClick={() => updateBulkRow(row.id, { duplicateResolution: 'replace' })}
+                                                  className={`px-2 py-0.5 text-[9px] font-bold rounded uppercase tracking-wide transition-all ${
+                                                    row.duplicateResolution === 'replace' ? 'bg-primary text-slate-950' : 'bg-white/10 text-white/60'
+                                                  }`}
+                                                >Replace</button>
+                                                <button
+                                                  type="button"
+                                                  onClick={() => updateBulkRow(row.id, { duplicateResolution: 'keep' })}
+                                                  className={`px-2 py-0.5 text-[9px] font-bold rounded uppercase tracking-wide transition-all ${
+                                                    row.duplicateResolution === 'keep' ? 'bg-surface border border-outline text-on-surface' : 'bg-white/10 text-white/60'
+                                                  }`}
+                                                >Keep</button>
+                                              </div>
+                                            </div>
+                                          )}
+
+                                          <div className="grid grid-cols-3 gap-2">
+                                            <div>
+                                              <label className="block text-[9px] font-bold uppercase tracking-wider text-on-surface-variant mb-1">Billing Month</label>
+                                              <input
+                                                type="month"
+                                                value={row.billing_month}
+                                                onChange={e => updateBulkRow(row.id, { billing_month: e.target.value })}
+                                                className="w-full px-2 py-1 bg-surface border border-outline rounded text-on-surface text-xs focus:outline-none focus:border-primary"
+                                              />
+                                            </div>
+                                            <div>
+                                              <label className="block text-[9px] font-bold uppercase tracking-wider text-on-surface-variant mb-1">Amount (₹)</label>
+                                              <input
+                                                type="number"
+                                                value={row.bill_amount || ''}
+                                                onChange={e => updateBulkRow(row.id, { bill_amount: parseFloat(e.target.value) || 0 })}
+                                                className="w-full px-2 py-1 bg-surface border border-outline rounded text-on-surface text-xs focus:outline-none focus:border-primary"
+                                              />
+                                            </div>
+                                            <div>
+                                              <label className="block text-[9px] font-bold uppercase tracking-wider text-on-surface-variant mb-1">Units (kWh)</label>
+                                              <input
+                                                type="number"
+                                                value={row.units || ''}
+                                                onChange={e => updateBulkRow(row.id, { units: parseFloat(e.target.value) || 0 })}
+                                                className="w-full px-2 py-1 bg-surface border border-outline rounded text-on-surface text-xs focus:outline-none focus:border-primary"
+                                              />
+                                            </div>
+                                          </div>
+                                        </>
+                                      )}
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                              <div className="px-3 py-2 border-t border-outline/20 bg-surface/10">
+                                <button
+                                  type="button"
+                                  onClick={handleAddManualBulkRow}
+                                  className="flex items-center gap-1.5 text-xs text-on-surface-variant hover:text-primary transition-colors font-semibold cursor-pointer"
+                                >
+                                  <Plus className="size-3.5" /> Add Missing Month Manually
+                                </button>
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Toggleable Manual Bill Entry Form */}
+                          <div className="border border-outline/30 rounded-xl overflow-hidden mt-4">
+                            <button
+                              type="button"
+                              onClick={() => setShowManualForm(!showManualForm)}
+                              className="w-full bg-surface/20 px-4 py-3 flex items-center justify-between hover:bg-surface/30 transition-colors cursor-pointer"
+                            >
+                              <div className="flex items-center gap-2">
+                                <Sparkles className="size-4 text-primary flex-shrink-0" />
+                                <p className="text-xs font-bold uppercase tracking-wider text-on-surface">Enter Current or Historical Bills Manually</p>
+                              </div>
+                              <ChevronDown className={`size-4 text-on-surface-variant transition-transform duration-200 ${showManualForm ? 'rotate-180' : ''}`} />
+                            </button>
+                            
+                            {showManualForm && (
+                              <div className="p-4 space-y-4 text-left bg-surface/10 border-t border-outline/20">
+                                {/* All fields in a single row */}
+                                <div className="grid grid-cols-1 md:grid-cols-[1.5fr_1.2fr_auto_1.2fr] gap-3 items-end">
+                                  <div>
+                                    <label className="block text-[11px] font-bold uppercase tracking-wider text-gray-400 mb-2">Billing Month</label>
+                                    <input
+                                      type="month"
+                                      value={fromMonth}
+                                      onChange={e => setFromMonth(e.target.value)}
+                                      className="w-full px-4 py-2 bg-surface border border-outline rounded-lg text-xs text-on-surface focus:outline-none focus:border-primary [color-scheme:dark]"
+                                    />
+                                  </div>
+                                  <div>
+                                    <label className="block text-[11px] font-bold uppercase tracking-wider text-gray-400 mb-2">Amount (₹)</label>
+                                    <input
+                                      type="number"
+                                      value={manualAmount}
+                                      placeholder="e.g. 2400"
+                                      onChange={e => {
+                                        const val = e.target.value;
+                                        setManualAmount(val);
+                                        if (isManualLocked && val) {
+                                          const calculated = calculateUnitsFromBill(parseFloat(val));
+                                          setManualUnits(String(calculated));
+                                        }
+                                      }}
+                                      className="w-full px-4 py-2 bg-surface border border-outline rounded-lg text-xs text-on-surface focus:outline-none focus:border-primary"
+                                    />
+                                  </div>
+
                                   <button
                                     type="button"
-                                    onClick={() => removeBulkRow(row.id)}
-                                    className="text-error/50 hover:text-error p-1 flex-shrink-0 transition-colors"
+                                    onClick={() => setIsManualLocked(!isManualLocked)}
+                                    className={`p-2 rounded-lg border transition-all flex items-center justify-center cursor-pointer mb-[1px] ${
+                                      isManualLocked 
+                                        ? 'bg-primary/20 border-primary/50 text-primary' 
+                                        : 'bg-surface border-outline text-gray-400 hover:text-white'
+                                    }`}
+                                    title={isManualLocked ? "Tariff Auto-Calculation Locked" : "Tariff Auto-Calculation Unlocked"}
                                   >
-                                    <Trash2 className="size-3.5" />
+                                    {isManualLocked ? <Lock className="size-4" /> : <Unlock className="size-4" />}
                                   </button>
+
+                                  <div>
+                                    <label className="block text-[11px] font-bold uppercase tracking-wider text-gray-400 mb-2">Units (kWh)</label>
+                                    <input
+                                      type="number"
+                                      value={manualUnits}
+                                      placeholder="e.g. 300"
+                                      onChange={e => {
+                                        const val = e.target.value;
+                                        setManualUnits(val);
+                                        if (isManualLocked && val) {
+                                          const calculated = calculateBillFromUnits(parseFloat(val));
+                                          setManualAmount(String(calculated));
+                                        }
+                                      }}
+                                      className="w-full px-4 py-2 bg-surface border border-outline rounded-lg text-xs text-on-surface focus:outline-none focus:border-primary"
+                                    />
+                                  </div>
                                 </div>
 
-                                {row.error ? (
-                                  <p className="text-xs text-error">{row.error}</p>
-                                ) : (
-                                  <>
-                                    {/* Duplicate warning banner */}
-                                    {isDupe && (
-                                      <div className="flex items-center gap-2 bg-amber-500/10 border border-amber-500/20 rounded-lg px-2.5 py-1.5 mb-2">
-                                        <AlertTriangle className="size-3.5 text-amber-400 flex-shrink-0" />
-                                        <span className="text-[10px] text-amber-300 flex-1">Duplicate billing month detected.</span>
-                                        <div className="flex gap-1">
-                                          <button
-                                            type="button"
-                                            onClick={() => updateBulkRow(row.id, { duplicateResolution: 'replace' })}
-                                            className={`px-2 py-0.5 text-[9px] font-bold rounded uppercase tracking-wide transition-all ${
-                                              row.duplicateResolution === 'replace'
-                                                ? 'bg-primary text-surface'
-                                                : 'bg-white/10 text-white/60 hover:text-white'
-                                            }`}
-                                          >Replace</button>
-                                          <button
-                                            type="button"
-                                            onClick={() => updateBulkRow(row.id, { duplicateResolution: 'keep' })}
-                                            className={`px-2 py-0.5 text-[9px] font-bold rounded uppercase tracking-wide transition-all ${
-                                              row.duplicateResolution === 'keep'
-                                                ? 'bg-surface-container border border-outline text-on-surface'
-                                                : 'bg-white/10 text-white/60 hover:text-white'
-                                            }`}
-                                          >Keep Old</button>
-                                        </div>
-                                      </div>
-                                    )}
-
-                                    {/* Editable fields */}
-                                    <div className="grid grid-cols-3 gap-2">
-                                      <div>
-                                        <label className="block text-[9px] font-bold uppercase tracking-wider text-on-surface-variant mb-1">
-                                          Billing Month {!row.billing_month && <span className="text-error">*</span>}
-                                        </label>
-                                        <input
-                                          type="month"
-                                          value={row.billing_month}
-                                          onChange={e => updateBulkRow(row.id, { billing_month: e.target.value })}
-                                          className={`w-full px-2 py-1.5 bg-surface border rounded-lg text-on-surface text-xs focus:outline-none focus:border-primary transition-colors ${
-                                            !row.billing_month ? 'border-error/60' : 'border-outline'
-                                          }`}
-                                        />
-                                      </div>
-                                      <div>
-                                        <label className="block text-[9px] font-bold uppercase tracking-wider text-on-surface-variant mb-1">Amount (₹)</label>
-                                        <input
-                                          type="number"
-                                          value={row.bill_amount || ''}
-                                          onChange={e => updateBulkRow(row.id, { bill_amount: parseFloat(e.target.value) || 0 })}
-                                          className="w-full px-2 py-1.5 bg-surface border border-outline rounded-lg text-on-surface text-xs focus:outline-none focus:border-primary transition-colors"
-                                          placeholder="e.g. 3500"
-                                        />
-                                      </div>
-                                      <div>
-                                        <label className="block text-[9px] font-bold uppercase tracking-wider text-on-surface-variant mb-1">Units (kWh)</label>
-                                        <input
-                                          type="number"
-                                          value={row.units || ''}
-                                          onChange={e => updateBulkRow(row.id, { units: parseFloat(e.target.value) || 0 })}
-                                          className="w-full px-2 py-1.5 bg-surface border border-outline rounded-lg text-on-surface text-xs focus:outline-none focus:border-primary transition-colors"
-                                          placeholder="e.g. 420"
-                                        />
-                                      </div>
-                                    </div>
-
-                                    {/* Month label preview */}
-                                    {row.billing_month && (
-                                      <p className="text-[10px] text-on-surface-variant mt-1.5">
-                                        📅 {formatMonthLabel(row.billing_month)}
-                                        {isPrimary && <span className="ml-2 text-primary font-semibold">← Primary bill</span>}
-                                      </p>
-                                    )}
-                                  </>
-                                )}
+                                {/* Add to history button */}
+                                <div className="flex justify-end pt-1">
+                                  <button
+                                    type="button"
+                                    onClick={handleAddManualHistoryBill}
+                                    className="px-3 py-1.5 bg-surface border border-outline hover:border-primary/30 text-on-surface font-semibold text-xs rounded-lg flex items-center gap-1.5 transition-all cursor-pointer"
+                                  >
+                                    <Plus className="size-3.5" /> Add to Historical Bills
+                                  </button>
+                                </div>
                               </div>
-                            );
-                          })}
-                        </div>
-
-                        {/* Add missing month row */}
-                        <div className="px-3 py-2 border-t border-outline/20 bg-surface/10">
-                          <button
-                            type="button"
-                            onClick={handleAddManualBulkRow}
-                            className="flex items-center gap-1.5 text-xs text-on-surface-variant hover:text-primary transition-colors font-semibold"
-                          >
-                            <Plus className="size-3.5" /> Add Missing Month Manually
-                          </button>
-                        </div>
-                      </div>
-                    )}
-
-                    {/* ── Fallback: no PDFs yet — manual entry shortcut ── */}
-                    {bulkBills.length === 0 && !isExtracting && (
-                      <div className="border border-outline/30 rounded-xl overflow-hidden mb-3">
-                        <div className="bg-surface/20 px-4 py-2.5 border-b border-outline/20 flex items-center gap-2">
-                          <Sparkles className="size-4 text-primary flex-shrink-0" />
-                          <p className="text-xs font-semibold text-on-surface">Enter Bill Manually Instead</p>
-                        </div>
-                        <form onSubmit={handleBillSubmit(onBillNext)} className="p-4 space-y-4">
-                          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                            <div>
-                              <label htmlFor="billing_month_manual" className="block text-xs font-semibold text-on-surface mb-2">Billing Month</label>
-                              <input
-                                {...regBill('billing_month')}
-                                id="billing_month_manual" type="month"
-                                className="w-full px-4 py-2.5 bg-surface border border-outline rounded-lg text-on-surface text-sm focus:outline-none focus:border-primary transition-colors"
-                              />
-                              {billErrors.billing_month && <p className="text-error text-xs mt-1">{billErrors.billing_month.message}</p>}
-                            </div>
-                            <div>
-                              <label htmlFor="bill_amount_manual" className="block text-xs font-semibold text-on-surface mb-2">Bill Amount (₹)</label>
-                              <input
-                                {...regBill('bill_amount', { valueAsNumber: true })}
-                                id="bill_amount_manual" type="number" placeholder="e.g. 3500"
-                                className="w-full px-4 py-2.5 bg-surface border border-outline rounded-lg text-on-surface text-sm focus:outline-none focus:border-primary transition-colors"
-                              />
-                              {billErrors.bill_amount && <p className="text-error text-xs mt-1">{billErrors.bill_amount.message}</p>}
-                            </div>
-                            <div>
-                              <label htmlFor="units_manual" className="block text-xs font-semibold text-on-surface mb-2">Units Consumed (kWh)</label>
-                              <input
-                                {...regBill('units', { valueAsNumber: true })}
-                                id="units_manual" type="number" placeholder="e.g. 420"
-                                className="w-full px-4 py-2.5 bg-surface border border-outline rounded-lg text-on-surface text-sm focus:outline-none focus:border-primary transition-colors"
-                              />
-                              {billErrors.units && <p className="text-error text-xs mt-1">{billErrors.units.message}</p>}
-                            </div>
+                            )}
                           </div>
-                          <div className="flex justify-between">
+
+                          {/* Historical Bills list display */}
+                          {prevBills.length > 0 && (
+                            <div className="border border-outline/30 rounded-xl overflow-hidden mt-3 text-left">
+                              <div className="bg-surface/20 px-4 py-2 border-b border-outline/25">
+                                <p className="text-xs font-semibold text-on-surface">Manually Added History Bills</p>
+                              </div>
+                              <div className="divide-y divide-outline/15 max-h-36 overflow-y-auto">
+                                {prevBills.map((b, idx) => (
+                                  <div key={idx} className="p-3 flex items-center justify-between text-xs hover:bg-surface/10 transition-all">
+                                    <span className="font-medium text-on-surface">📅 {b.monthLabel}</span>
+                                    <div className="flex items-center gap-4">
+                                      <span className="text-on-surface-variant">₹{b.bill_amount}</span>
+                                      <span className="text-primary font-mono">{b.units} kWh</span>
+                                      <button
+                                        type="button"
+                                        onClick={() => handleRemoveHistoryBill(idx)}
+                                        className="text-error/60 hover:text-error transition-colors p-1 cursor-pointer"
+                                      >
+                                        <Trash2 className="size-3.5" />
+                                      </button>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Bottom Navigation for step 2 Basic Meter */}
+                          <div className="flex justify-between pt-4 border-t border-outline/25 mt-4">
                             <button
-                              type="button" onClick={() => dispatch({ type: 'SET_STEP', payload: 1 })}
-                              className="border border-outline text-on-surface-variant px-5 py-2.5 rounded-lg text-sm font-medium hover:bg-surface transition-all"
+                              type="button" onClick={() => setMeterType(null)}
+                              className="border border-outline text-on-surface-variant px-5 py-2.5 rounded-lg text-sm font-medium hover:bg-surface transition-all cursor-pointer"
                             >Back</button>
+                            
                             <button
-                              type="submit" disabled={isSubmitting}
-                              className="bg-primary text-surface px-6 py-2.5 rounded-lg text-sm font-semibold transition-all flex items-center gap-2 hover:bg-primary/90 disabled:opacity-50 shadow-md"
+                              type="button"
+                              onClick={() => handleManualFormSubmit()}
+                              className="bg-primary text-slate-950 px-6 py-2.5 rounded-lg text-sm font-semibold transition-all flex items-center gap-2 hover:opacity-90 shadow-md cursor-pointer"
                             >
-                              {isSubmitting ? <><Loader2 className="size-4 animate-spin" /> Saving...</> : <>Next Step <ArrowRightIcon /></>}
+                              Confirm &amp; Continue <ArrowRightIcon />
                             </button>
                           </div>
-                        </form>
-                      </div>
-                    )}
+                        </m.div>
+                      )}
 
-                    {/* ── Footer nav when bulk bills are present ── */}
-                    {bulkBills.length > 0 && (
-                      <div className="flex justify-between pt-1">
-                        <button
-                          type="button" onClick={() => dispatch({ type: 'SET_STEP', payload: 1 })}
-                          className="border border-outline text-on-surface-variant px-5 py-2.5 rounded-lg text-sm font-medium hover:bg-surface transition-all"
-                        >Back</button>
-                        <button
-                          type="button"
-                          onClick={handleBulkBillConfirm}
-                          disabled={isSubmitting || !getPrimaryBill()}
-                          className="bg-primary text-surface px-6 py-2.5 rounded-lg text-sm font-semibold transition-all flex items-center gap-2 hover:bg-primary/90 disabled:opacity-50 shadow-md"
+                      {meterType === 'smart' && (
+                        <m.div
+                          key="smart-meter"
+                          initial={{ opacity: 0, height: 0 }}
+                          animate={{ opacity: 1, height: 'auto' }}
+                          exit={{ opacity: 0, height: 0 }}
+                          className="space-y-4 overflow-hidden pt-3 border-t border-outline/20 text-left"
                         >
-                          {isSubmitting ? (
-                            <><Loader2 className="size-4 animate-spin" /> Saving...</>
-                          ) : (
-                            <>Confirm &amp; Continue <ArrowRightIcon /></>
-                          )}
-                        </button>
-                      </div>
-                    )}
+                          <p className="text-xs text-on-surface-variant">
+                            Connect your Smart Meter via your utility distributor (DISCOM) for real-time itemized telemetry and analysis.
+                          </p>
+
+                          <div>
+                            <label className="block text-xs font-semibold text-on-surface mb-2">DISCOM Account / Consumer Number</label>
+                            <input
+                              type="text"
+                              value={discomNumber}
+                              onChange={e => setDiscomNumber(e.target.value)}
+                              placeholder="e.g. 102938475"
+                              className="w-full px-4 py-2.5 bg-surface border border-outline rounded-lg text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/20"
+                            />
+                            <p className="text-[11px] text-gray-400 mt-2 flex items-center gap-1">
+                              💡 <span>Tip: Find your account number at the top of your utility bill. <a href="https://example.com/sample-bill" target="_blank" rel="noreferrer" className="text-primary hover:underline font-semibold">Where is this?</a></span>
+                            </p>
+                          </div>
+
+                          <div className="flex justify-between pt-4 border-t border-outline/10">
+                            <button
+                              type="button" onClick={() => setMeterType(null)}
+                              className="border border-outline text-on-surface-variant px-5 py-2.5 rounded-lg text-sm font-medium hover:bg-surface transition-all cursor-pointer"
+                            >Back to Meter Type</button>
+                            <button
+                              type="button"
+                              onClick={handleFetchSmartMeter}
+                              disabled={isFetchingSmart || !discomNumber.trim()}
+                              className="bg-primary text-slate-950 px-6 py-2.5 rounded-lg text-sm font-semibold transition-all flex items-center gap-2 hover:opacity-90 disabled:opacity-30 disabled:cursor-not-allowed shadow-md cursor-pointer"
+                            >
+                              {isFetchingSmart ? (
+                                <><Loader2 className="size-4 animate-spin" /> Fetching Telemetry...</>
+                              ) : (
+                                <>Fetch Telemetry &amp; Continue <ArrowRightIcon /></>
+                              )}
+                            </button>
+                          </div>
+                        </m.div>
+                      )}
+
+                      {meterType === 'estimate' && (
+                        <m.div
+                          key="estimate-meter"
+                          initial={{ opacity: 0, height: 0 }}
+                          animate={{ opacity: 1, height: 'auto' }}
+                          exit={{ opacity: 0, height: 0 }}
+                          className="space-y-4 overflow-hidden pt-3 border-t border-outline/20 text-left"
+                        >
+                          <p className="text-xs text-on-surface-variant leading-relaxed">
+                            No bills handy? No worries. We'll calibrate your home using a baseline smart estimate (300 kWh) suited to your location and dwelling type. You can refine these inputs at any time in your dashboard settings.
+                          </p>
+
+                          <div className="flex justify-between pt-4 border-t border-outline/10">
+                            <button
+                              type="button" onClick={() => setMeterType(null)}
+                              className="border border-outline text-on-surface-variant px-5 py-2.5 rounded-lg text-sm font-medium hover:bg-surface transition-all cursor-pointer"
+                            >Back to Meter Type</button>
+                            <button
+                              type="button"
+                              onClick={handleProceedEstimate}
+                              className="bg-primary text-slate-950 px-6 py-2.5 rounded-lg text-sm font-semibold transition-all flex items-center gap-2 hover:opacity-90 shadow-md cursor-pointer"
+                            >
+                              Proceed with Estimate <ArrowRightIcon />
+                            </button>
+                          </div>
+                        </m.div>
+                      )}
+
+                      {meterType === null && (
+                        <div className="flex justify-start pt-4 border-t border-outline/10">
+                          <button
+                            type="button" onClick={() => dispatch({ type: 'SET_STEP', payload: 1 })}
+                            className="border border-outline text-on-surface-variant px-5 py-2.5 rounded-lg text-sm font-medium hover:bg-surface transition-all cursor-pointer"
+                          >Back to Profile</button>
+                        </div>
+                      )}
+                    </AnimatePresence>
                   </m.div>
                 )}
 
 
+
                 {/* ───────── STEP 3: Appliances ───────── */}
-                {state.step === 3 && (
-                  <m.div
-                    key="step3"
-                    initial={{ opacity: 0, x: 20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    exit={{ opacity: 0, x: -20 }}
-                    className="flex flex-col h-full"
-                  >
-                    <h3 className="font-display font-semibold text-lg text-on-surface mb-1 flex items-center gap-2">
-                      <Settings className="size-5 text-primary" /> Step 3: Appliance Calibration
-                    </h3>
-                    <p className="text-on-surface-variant text-sm mb-4">Adjust your household appliances and their energy characteristics.</p>
+                {state.step === 3 && (() => {
+                  const allStandard = Object.keys(DEFAULT_APPLIANCES).map(key => ({
+                    key,
+                    ...DEFAULT_APPLIANCES[key]
+                  }));
 
-                    {/* Appliances list – scrollable */}
-                    <div ref={applianceListRef} className="space-y-3 max-h-[420px] overflow-y-auto pr-1 mb-4">
-                      {state.appliances.map((app) => (
-                        <div key={app.id} className="p-4 rounded-xl border bg-surface/50 border-outline hover:border-primary/30 transition-all duration-300 flex flex-col gap-3 shadow-sm">
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-3">
-                              <span className="text-xl">{app.icon}</span>
-                              {app.isCustom ? (
-                                <input
-                                  type="text" value={app.name}
-                                  onChange={(e) => dispatch({ type: 'UPDATE_APPLIANCE', payload: { id: app.id, fields: { name: e.target.value } } })}
-                                  placeholder="Appliance Name"
-                                  className="bg-surface border border-outline rounded px-2.5 py-1 text-sm font-semibold text-on-surface focus:outline-none focus:border-primary"
-                                />
-                              ) : (
-                                <span className="text-sm font-semibold text-on-surface">{app.name}</span>
-                              )}
-                            </div>
-                            <button
-                              type="button"
-                              onClick={() => dispatch({ type: 'REMOVE_APPLIANCE', payload: app.id })}
-                              className="text-error/60 hover:text-error hover:bg-error/10 p-1.5 rounded-lg transition-all"
-                            >
-                              <Trash2 className="size-4" />
-                            </button>
+                  return (
+                    <m.div
+                      key="step3"
+                      initial={{ opacity: 0, x: 20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      exit={{ opacity: 0, x: -20 }}
+                      className="flex flex-col h-full font-sans"
+                    >
+                      <h3 className="font-display font-semibold text-lg text-on-surface mb-1 flex items-center gap-2">
+                        <Settings className="size-5 text-primary" /> Step 3: Appliance Selection
+                      </h3>
+                      <p className="text-on-surface-variant text-sm mb-4">Toggle appliances in your home and select their daily usage level.</p>
+
+                      {/* Top Tags for Standard Appliance Selection */}
+                      <div className="mb-5 space-y-2">
+                        <label className="block text-xs font-bold uppercase tracking-wider text-gray-400">Quick Select Standard Appliances</label>
+                        <div className="flex flex-wrap gap-2 max-h-36 overflow-y-auto pr-1">
+                          {allStandard.map((appDef) => {
+                            const isSelected = state.appliances.some(a => a.id === appDef.key);
+                            return (
+                              <button
+                                key={appDef.key}
+                                type="button"
+                                onClick={() => {
+                                  if (isSelected) {
+                                    dispatch({ type: 'REMOVE_APPLIANCE', payload: appDef.key });
+                                  } else {
+                                    dispatch({
+                                      type: 'ADD_APPLIANCE',
+                                      payload: {
+                                        id: appDef.key,
+                                        name: appDef.name,
+                                        icon: appDef.icon,
+                                        power_kw: appDef.power_kw,
+                                        avg_hours_day: appDef.avg_hours_day,
+                                        seasonality: appDef.seasonality || 'whole_year'
+                                      }
+                                    });
+                                  }
+                                }}
+                                className={`px-3 py-1.5 rounded-xl text-xs font-semibold border flex items-center gap-1.5 transition-all cursor-pointer ${
+                                  isSelected
+                                    ? 'bg-primary/20 text-primary border-primary/50 shadow-[0_0_10px_rgba(0,229,255,0.15)] font-bold scale-[1.02]'
+                                    : 'bg-surface border-outline hover:border-outline-variant text-gray-400'
+                                }`}
+                              >
+                                <span>{appDef.icon}</span>
+                                <span>{appDef.name}</span>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+
+                      {/* Appliances list – scrollable */}
+                      <div ref={applianceListRef} className="space-y-3 max-h-[300px] overflow-y-auto pr-1 mb-4">
+                        {state.appliances.length === 0 ? (
+                          <div className="text-center py-8 text-xs text-on-surface-variant italic border border-dashed border-outline/30 rounded-xl">
+                            No appliances selected. Click tags above or add a custom one below!
                           </div>
-
-                          <div className="grid grid-cols-3 gap-3 border-t border-outline/30 pt-3">
-                            {/* Power Rating */}
-                            <div>
-                              <label className="block text-[10px] font-bold uppercase tracking-wider text-on-surface-variant mb-1.5">Power (kW)</label>
-                              <div className="relative">
-                                <input
-                                  type="number" step="0.05" min="0.01" max="20.0"
-                                  value={app.power_kw}
-                                  onChange={(e) => dispatch({ type: 'UPDATE_APPLIANCE', payload: { id: app.id, fields: { power_kw: parseFloat(e.target.value) || 0 } } })}
-                                  className="w-full px-3 py-1.5 pr-8 bg-surface border border-outline rounded-lg text-xs font-semibold text-on-surface focus:outline-none focus:border-primary"
-                                />
-                                <span className="absolute inset-y-0 right-2.5 flex items-center text-[10px] font-bold text-on-surface-variant pointer-events-none">kW</span>
+                        ) : (
+                          state.appliances.map((app) => (
+                            <div key={app.id} className="p-3 rounded-xl border bg-surface/50 border-outline hover:border-primary/30 transition-all duration-300 flex items-center justify-between gap-4 shadow-sm">
+                              {/* Left: Icon and Name */}
+                              <div className="flex items-center gap-3 min-w-[140px] max-w-[200px]">
+                                <span className="text-xl">{app.icon}</span>
+                                {app.isCustom ? (
+                                  <input
+                                    type="text" value={app.name}
+                                    onChange={(e) => dispatch({ type: 'UPDATE_APPLIANCE', payload: { id: app.id, fields: { name: e.target.value } } })}
+                                    placeholder="Name"
+                                    className="w-full bg-surface border border-outline rounded px-2.5 py-1 text-xs font-semibold text-on-surface focus:outline-none focus:border-primary"
+                                  />
+                                ) : (
+                                  <span className="text-xs font-semibold text-on-surface whitespace-nowrap overflow-hidden text-ellipsis">{app.name}</span>
+                                )}
                               </div>
-                            </div>
 
-                            {/* Hours/day */}
-                            <div>
-                              <label className="flex justify-between text-[10px] font-bold uppercase tracking-wider text-on-surface-variant mb-1.5">
-                                <span>Hrs / Day</span>
-                                <span className="text-primary">{app.avg_hours_day}h</span>
-                              </label>
-                              <input
-                                type="range" min="0.1" max="24" step="0.5"
-                                value={app.avg_hours_day}
-                                onChange={(e) => dispatch({ type: 'UPDATE_APPLIANCE', payload: { id: app.id, fields: { avg_hours_day: parseFloat(e.target.value) || 1 } } })}
-                                className="w-full accent-primary h-1 bg-white/10 rounded-full outline-none cursor-pointer mt-2.5"
-                              />
-                            </div>
+                              {/* Center: Daily Usage Tier Buttons */}
+                              <div className="flex-1 flex gap-2 justify-center max-w-sm">
+                                {(['low', 'medium', 'average'] as const).map((tier) => {
+                                  const activeHours = app.avg_hours_day;
+                                  let active = false;
+                                  if (tier === 'low' && activeHours <= 8) active = true;
+                                  else if (tier === 'medium' && activeHours > 8 && activeHours <= 16) active = true;
+                                  else if (tier === 'average' && activeHours > 16) active = true;
 
-                            {/* Seasonality */}
-                            <div>
-                              <label className="block text-[10px] font-bold uppercase tracking-wider text-on-surface-variant mb-1.5">Season</label>
-                              <div className="grid grid-cols-3 bg-surface border border-outline rounded-lg p-0.5 text-center text-[9px] font-semibold text-on-surface-variant">
-                                {(['whole_year', 'summer', 'winter'] as const).map((season) => {
-                                  const active = app.seasonality === season;
-                                  const label  = season === 'whole_year' ? 'All' : season === 'summer' ? 'Sum' : 'Win';
+                                  const label = tier === 'low' ? 'Low (0-8h)' : tier === 'medium' ? 'Med (8-16h)' : 'Avg (16-24h)';
                                   return (
                                     <button
-                                      key={season} type="button"
-                                      onClick={() => dispatch({ type: 'UPDATE_APPLIANCE', payload: { id: app.id, fields: { seasonality: season } } })}
-                                      className={`py-1 rounded-md transition-all ${active ? 'bg-primary text-surface font-bold' : 'hover:text-on-surface'}`}
+                                      key={tier}
+                                      type="button"
+                                      onClick={() => {
+                                        let hours = 4;
+                                        if (tier === 'medium') hours = 12;
+                                        else if (tier === 'average') hours = 20;
+                                        dispatch({
+                                          type: 'UPDATE_APPLIANCE',
+                                          payload: { id: app.id, fields: { avg_hours_day: hours } }
+                                        });
+                                      }}
+                                      className={`py-1.5 px-2 rounded-lg text-[10px] font-semibold border transition-all cursor-pointer flex-1 whitespace-nowrap text-center ${
+                                        active
+                                          ? 'bg-primary text-slate-950 border-primary shadow-[0_0_8px_rgba(0,229,255,0.2)] font-bold'
+                                          : 'bg-surface border-outline hover:border-outline-variant hover:bg-surface/50 text-gray-400'
+                                      }`}
                                     >
                                       {label}
                                     </button>
                                   );
                                 })}
                               </div>
+
+                              {/* Right: Trash Button */}
+                              <button
+                                type="button"
+                                onClick={() => dispatch({ type: 'REMOVE_APPLIANCE', payload: app.id })}
+                                className="text-error/60 hover:text-error hover:bg-error/10 p-1.5 rounded-lg transition-all cursor-pointer flex-shrink-0"
+                              >
+                                <Trash2 className="size-4" />
+                              </button>
+                            </div>
+                          ))
+                        )}
+                      </div>
+
+                      {/* Custom add trigger */}
+                      <div className="flex gap-3 mb-4">
+                        <button
+                          type="button" onClick={() => setShowCustomModal(true)}
+                          className="px-4 py-2 bg-surface border border-outline hover:border-primary/30 text-on-surface font-semibold text-xs rounded-lg flex items-center gap-1.5 transition-all cursor-pointer"
+                        >
+                          <Plus className="size-4" /> Add Custom Appliance
+                        </button>
+                      </div>
+
+                      <div className="flex justify-between pt-3 border-t border-outline/30">
+                        <button
+                          type="button" onClick={() => dispatch({ type: 'SET_STEP', payload: 2 })}
+                          className="border border-outline text-on-surface-variant px-5 py-2.5 rounded-lg text-sm font-medium hover:bg-surface transition-all cursor-pointer"
+                        >
+                          Back
+                        </button>
+                        <button
+                          type="button" onClick={onAppliancesNext}
+                          className="bg-primary text-slate-950 px-6 py-2.5 rounded-lg text-sm font-semibold transition-all flex items-center gap-2 hover:opacity-90 shadow-md cursor-pointer"
+                        >
+                          Next Step <ArrowRightIcon />
+                        </button>
+                      </div>
+
+                      {/* Custom Appliance Dialog Popup */}
+                      {showCustomModal && (
+                        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-sm px-4">
+                          <div className="max-w-md w-full p-6 bg-surface-container border border-outline rounded-2xl shadow-2xl space-y-4">
+                            <div className="flex justify-between items-center pb-2 border-b border-outline/30">
+                              <h4 className="font-display font-semibold text-base text-on-surface">Add Custom Appliance</h4>
+                              <button type="button" onClick={() => setShowCustomModal(false)} className="text-on-surface-variant hover:text-on-surface p-1 cursor-pointer">
+                                <X className="size-4" />
+                              </button>
+                            </div>
+                            <div className="space-y-4 text-left">
+                              <div>
+                                <label className="block text-xs font-semibold text-on-surface mb-2">Appliance Name</label>
+                                <input 
+                                  type="text" 
+                                  placeholder="e.g. EV Charger, Electric Heater" 
+                                  value={customName}
+                                  onChange={(e) => setCustomName(e.target.value)}
+                                  className="w-full px-4 py-2.5 bg-surface border border-outline rounded-lg text-xs text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/20"
+                                />
+                              </div>
+                              <div>
+                                <label className="block text-xs font-semibold text-on-surface mb-2">Estimated Daily Usage</label>
+                                <div className="grid grid-cols-3 gap-2">
+                                  {(['low', 'medium', 'average'] as const).map((tier) => {
+                                    const label = tier === 'low' ? 'Low (0-8h)' : tier === 'medium' ? 'Medium (8-16h)' : 'Average (16-24h)';
+                                    return (
+                                      <button
+                                        key={tier}
+                                        type="button"
+                                        onClick={() => setCustomUsage(tier)}
+                                        className={`py-2 rounded-lg text-[10px] font-semibold border transition-all cursor-pointer ${
+                                          customUsage === tier
+                                            ? 'bg-primary text-slate-950 border-primary font-bold shadow-[0_0_8px_rgba(0,229,255,0.2)]'
+                                            : 'bg-surface border-outline hover:border-outline-variant hover:bg-surface/50 text-gray-400'
+                                        }`}
+                                      >
+                                        {label}
+                                      </button>
+                                    );
+                                  })}
+                                </div>
+                              </div>
+                              <div>
+                                <label className="block text-xs font-semibold text-on-surface mb-2">Power Category (Current Draw)</label>
+                                <div className="grid grid-cols-3 gap-2">
+                                  {(['low', 'medium', 'high'] as const).map((power) => {
+                                    const label = power === 'low' ? 'Low (TV/Fan)' : power === 'medium' ? 'Med (Fridge)' : 'High (AC/Geyser)';
+                                    return (
+                                      <button
+                                        key={power}
+                                        type="button"
+                                        onClick={() => setCustomPower(power)}
+                                        className={`py-2 rounded-lg text-[10px] font-semibold border transition-all cursor-pointer ${
+                                          customPower === power
+                                            ? 'bg-primary text-slate-950 border-primary font-bold shadow-[0_0_8px_rgba(0,229,255,0.2)]'
+                                            : 'bg-surface border-outline hover:border-outline-variant hover:bg-surface/50 text-gray-400'
+                                        }`}
+                                      >
+                                        {label}
+                                      </button>
+                                    );
+                                  })}
+                                </div>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={handleAddCustomSubmit}
+                                className="w-full py-2.5 bg-primary text-slate-950 font-semibold text-sm rounded-lg hover:opacity-90 transition-all shadow-md mt-2 cursor-pointer"
+                              >
+                                Add Custom Appliance
+                              </button>
                             </div>
                           </div>
                         </div>
-                      ))}
-                    </div>
-
-                    {/* Add appliance buttons */}
-                    <div ref={addBtnRef} className="relative flex gap-3 mb-4">
-                      <button
-                        type="button"
-                        onClick={() => setIsAddDropdownOpen(!isAddDropdownOpen)}
-                        className="px-4 py-2 bg-primary text-surface font-semibold text-xs rounded-lg flex items-center gap-1.5 transition-all shadow-md hover:bg-primary/90"
-                      >
-                        <Plus className="size-4 stroke-[3]" /> Add Appliance <ChevronDown className={`size-3.5 transition-transform ${isAddDropdownOpen ? 'rotate-180' : ''}`} />
-                      </button>
-                      <button
-                        type="button" onClick={handleAddCustomAppliance}
-                        className="px-4 py-2 bg-surface border border-outline hover:border-primary/30 text-on-surface font-semibold text-xs rounded-lg flex items-center gap-1.5 transition-all"
-                      >
-                        <Plus className="size-4" /> Custom
-                      </button>
-
-                      {isAddDropdownOpen && (
-                        <div className="absolute top-full left-0 mt-1 w-60 rounded-xl bg-surface-container border border-outline shadow-2xl z-50 overflow-hidden">
-                          <div className="px-3 py-2 text-[9px] font-bold uppercase tracking-wider text-on-surface-variant border-b border-outline/35">
-                            Standard appliances
-                          </div>
-                          <div className="py-1 max-h-48 overflow-y-auto">
-                            {remainingDefaults.length === 0 ? (
-                              <div className="px-4 py-3 text-xs text-on-surface-variant italic">All appliances added!</div>
-                            ) : (
-                              remainingDefaults.map((defApp) => (
-                                <button
-                                  key={defApp.key} type="button"
-                                  onClick={() => handleAddDefaultAppliance(defApp)}
-                                  className="w-full text-left px-4 py-2.5 text-xs text-on-surface hover:bg-primary/10 transition-colors flex items-center gap-2.5"
-                                >
-                                  <span className="text-base">{defApp.icon}</span>
-                                  <span className="font-medium flex-1">{defApp.name}</span>
-                                  <span className="text-[10px] text-on-surface-variant font-bold">{defApp.power_kw}kW</span>
-                                </button>
-                              ))
-                            )}
-                          </div>
-                        </div>
                       )}
-                    </div>
-
-                    <div className="flex justify-between pt-3 border-t border-outline/30">
-                      <button
-                        type="button" onClick={() => dispatch({ type: 'SET_STEP', payload: 2 })}
-                        className="border border-outline text-on-surface-variant px-5 py-2.5 rounded-lg text-sm font-medium hover:bg-surface transition-all"
-                      >
-                        Back
-                      </button>
-                      <button
-                        type="button" onClick={onAppliancesNext}
-                        className="bg-primary text-surface px-6 py-2.5 rounded-lg text-sm font-semibold transition-all flex items-center gap-2 hover:bg-primary/90 shadow-md"
-                      >
-                        Next Step <ArrowRightIcon />
-                      </button>
-                    </div>
-                  </m.div>
-                )}
+                    </m.div>
+                  );
+                })()}
 
                 {/* ───────── STEP 4: Review ───────── */}
                 {state.step === 4 && currentCalc && state.billData && state.profileData && (

@@ -21,5 +21,4 @@ export const DEFAULT_APPLIANCES: Record<string, Omit<Appliance, 'id'> & { contro
   Microwave:        { name: 'Microwave',       icon: '📡', power_kw: 1.2, avg_hours_day: 0.3, control_type: 'hours' },
   Lights:           { name: 'Lights',          icon: '💡', power_kw: 0.3, avg_hours_day: 5, control_type: 'hours' },
   Fans:             { name: 'Fans',            icon: '🌀', power_kw: 0.075, avg_hours_day: 8, control_type: 'hours' },
-  Laptop:           { name: 'Laptop',          icon: '💻', power_kw: 0.065, avg_hours_day: 6, control_type: 'hours' },
 };
