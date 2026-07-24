@@ -74,7 +74,9 @@ const parseBillPDF = async (req, res) => {
     // Use unpdf - serverless-safe PDF parser (no DOMMatrix/canvas deps)
     const { extractText } = await import('unpdf');
     const rawPdf = await extractText(dataUint8);
-    const pdfText = Array.isArray(rawPdf) ? rawPdf.join('\n') : rawPdf;
+    const pdfText = rawPdf && typeof rawPdf === 'object' && Array.isArray(rawPdf.text)
+      ? rawPdf.text.join('\n')
+      : (Array.isArray(rawPdf) ? rawPdf.join('\n') : rawPdf);
 
     // Use Groq LLM service to parse the bill text
     const parsedData = await llmService.parseBillText(pdfText);
