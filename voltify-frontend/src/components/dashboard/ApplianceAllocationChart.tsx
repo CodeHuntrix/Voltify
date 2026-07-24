@@ -52,9 +52,9 @@ export default function ApplianceAllocationChart({ applianceBreakdown }: Applian
         <Pie
           data={data}
           cx="50%"
-          cy="42%"
-          innerRadius={50}
-          outerRadius={75}
+          cy="46%"
+          innerRadius={42}
+          outerRadius={62}
           paddingAngle={3}
           dataKey="units"
           labelLine={false}
@@ -66,8 +66,8 @@ export default function ApplianceAllocationChart({ applianceBreakdown }: Applian
           ))}
         </Pie>
 
-        <text x="50%" y="42%" textAnchor="middle" dominantBaseline="middle">
-          <tspan x="50%" dy="-0.3em" fill="#ededed" fontSize={15} fontWeight={700}>
+        <text x="50%" y="46%" textAnchor="middle" dominantBaseline="middle">
+          <tspan x="50%" dy="-0.3em" fill="#ededed" fontSize={14} fontWeight={700}>
             {totalUnits.toFixed(0)}
           </tspan>
           <tspan x="50%" dy="1.4em" fill="#888" fontSize={9}>

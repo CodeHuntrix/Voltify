@@ -4,9 +4,10 @@ import { Link } from 'react-router-dom';
 import {
   Zap, Flame, Coins, Trophy, Sparkles, TrendingUp, AlertTriangle, CheckCircle, CheckCircle2,
   Info, Thermometer, ShieldAlert, BadgeAlert, ArrowUpRight, Plus, Minus, ArrowRight, ArrowLeft, Sliders, Check,
-  Upload, X, Loader2, FileText
+  Upload, X, Loader2, FileText, Lock, Unlock, ChevronDown
 } from 'lucide-react';
 import { useDropzone } from 'react-dropzone';
+import { calculateBillFromUnits, calculateUnitsFromBill } from './onboarding';
 import { useAuthStore } from '../store/authStore';
 import { useDashboardStore } from '../store/dashboardStore';
 import { useGamificationStore } from '../store/gamificationStore';
@@ -46,6 +47,8 @@ export default function Dashboard() {
   const [manualAmount, setManualAmount] = useState('');
   const [manualUnits, setManualUnits] = useState('');
   const [manualMonth, setManualMonth] = useState('');
+  const [showManualForm, setShowManualForm] = useState(false);
+  const [isManualLocked, setIsManualLocked] = useState(true);
 
   // Comfort-Safe Savings (CSS) Recommendations State
   const [recommendations, setRecommendations] = useState<any[]>([]);
@@ -78,10 +81,17 @@ export default function Dashboard() {
   useEffect(() => {
     async function loadData() {
       try {
+        const rawHType = onboarding?.household_type || 'family';
+        let backendHType = 'family';
+        if (rawHType === '1_person' || rawHType === 'bachelor') backendHType = 'bachelor';
+        else if (rawHType === '2_people' || rawHType === '3_people' || rawHType === '4_people' || rawHType === 'family') backendHType = 'family';
+        else if (rawHType === '5_plus_people' || rawHType === 'large_family') backendHType = 'large_family';
+        else if (rawHType === 'organization') backendHType = 'organization';
+
         const [summary, breakdown, lb, chal, gamestats, cssRes] = await Promise.all([
           apiService.getDashboardSummary(),
           apiService.getApplianceBreakdown(),
-          apiService.getLeaderboard(onboarding?.household_type || 'family'),
+          apiService.getLeaderboard(backendHType),
           apiService.getGamificationChallenge(),
           apiService.getGamificationStats(),
           apiService.getCSSRecommendations()
@@ -475,7 +485,7 @@ export default function Dashboard() {
             onClick={() => setShowCheckInModal(true)}
             className="px-4 py-2 bg-gradient-to-r from-primary to-blue-500 hover:opacity-90 text-slate-950 transition-all rounded-xl text-xs font-bold shadow-md cursor-pointer border border-primary/20"
           >
-            📊 Log Telemetry
+            📊 Check In
           </button>
           <button
             onClick={() => setShowUploadModal(true)}
@@ -711,7 +721,7 @@ export default function Dashboard() {
                 <div className="mx-auto size-16 rounded-full bg-volt-pink/15 flex items-center justify-center border border-volt-pink/25 shadow-[0_0_20px_rgba(236,72,153,0.2)] animate-pulse mb-2">
                   <Flame className="size-8 text-volt-pink" />
                 </div>
-                <h3 className="font-display font-bold text-xl text-white tracking-tight">Daily Telemetry Log</h3>
+                <h3 className="font-display font-bold text-xl text-white tracking-tight">Daily Check In</h3>
                 <p className="text-[11px] text-on-surface-variant leading-relaxed">
                   Log your appliance use today. Adjust overall usage to pre-fill all run times instantly!
                 </p>
@@ -784,75 +794,51 @@ export default function Dashboard() {
                     {userAppliances.map((app) => {
                       const currentHours = checkInApplianceHours[String(app.id)] !== undefined ? checkInApplianceHours[String(app.id)] : app.avg_hours_day;
                       return (
-                        <div key={app.id} className="p-3 bg-white/5 border border-white/[0.04] rounded-xl space-y-2.5 hover:bg-white/[0.07] hover:border-white/[0.08] transition-all">
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-2.5">
-                              <span className="text-xl">{app.icon}</span>
-                              <div>
-                                <span className="text-xs font-semibold text-white block leading-tight">{app.name}</span>
-                                <span className="text-[9px] text-gray-500 font-sans block">Avg: {app.avg_hours_day} hrs</span>
-                              </div>
-                            </div>
-                            
-                            {/* Larger, obvious, and highly user-friendly per-appliance buttons */}
-                            <div className="flex items-center gap-1 bg-[#1a1a1a] p-1 rounded-xl border border-white/[0.05]">
-                              {(['below', 'normal', 'above'] as const).map((p) => {
-                                const labels = { below: 'Less', normal: 'Avg', above: 'More' };
-                                const activeStyles = {
-                                  below: 'bg-emerald-500/25 text-emerald-400 border border-emerald-500/30 shadow-[0_0_8px_rgba(16,185,129,0.1)] font-extrabold scale-105',
-                                  normal: 'bg-primary/25 text-primary border border-primary/30 shadow-[0_0_8px_rgba(0,229,255,0.1)] font-extrabold scale-105',
-                                  above: 'bg-volt-pink/25 text-volt-pink border border-volt-pink/30 shadow-[0_0_8px_rgba(236,72,153,0.1)] font-extrabold scale-105'
-                                };
-                                const isSelected = appliancePerceptions[String(app.id)] === p;
-                                return (
-                                  <button
-                                    key={p}
-                                    type="button"
-                                    onClick={() => {
-                                      const multipliers = { below: 0.7, normal: 1.0, above: 1.3 };
-                                      const newHrs = Math.max(0, Math.min(24, parseFloat((app.avg_hours_day * multipliers[p]).toFixed(1))));
-                                      setCheckInApplianceHours(prev => ({ ...prev, [String(app.id)]: newHrs }));
-                                      setAppliancePerceptions(prev => ({ ...prev, [String(app.id)]: p }));
-                                      setOverallPerception('custom'); // Flag that overall has been customized
-                                    }}
-                                    className={`px-3 py-1 rounded-lg text-[10px] cursor-pointer transition-all duration-200 ${
-                                      isSelected 
-                                        ? activeStyles[p] 
-                                        : 'text-gray-500 hover:text-white border border-transparent bg-transparent hover:bg-white/5'
-                                    }`}
-                                  >
-                                    {labels[p]}
-                                  </button>
-                                );
-                              })}
+                        <div key={app.id} className="p-3 bg-white/5 border border-white/[0.04] rounded-xl flex items-center justify-between gap-3 hover:bg-white/[0.07] transition-all">
+                          <div className="flex items-center gap-2.5 min-w-0">
+                            <span className="text-xl">{app.icon}</span>
+                            <div className="min-w-0">
+                              <span className="text-xs font-semibold text-white truncate block capitalize leading-tight">{app.name}</span>
+                              <span className="text-[9px] text-gray-500 font-sans block">Avg: {app.avg_hours_day}h</span>
                             </div>
                           </div>
+                          
+                          <div className="flex gap-1.5 shrink-0">
+                            {(['low', 'medium', 'average'] as const).map((tier) => {
+                              let active = false;
+                              if (tier === 'low' && currentHours <= 8) active = true;
+                              else if (tier === 'medium' && currentHours > 8 && currentHours <= 16) active = true;
+                              else if (tier === 'average' && currentHours > 16) active = true;
 
-                          <div className="flex items-center gap-3">
-                            <span className="text-[10px] text-slate-500">0h</span>
-                            <input
-                              type="range"
-                              min="0"
-                              max="24"
-                              step="0.5"
-                              value={currentHours}
-                              onChange={(e) => {
-                                const val = parseFloat(e.target.value);
-                                setCheckInApplianceHours(prev => ({
-                                  ...prev,
-                                  [String(app.id)]: val
-                                }));
-                                setAppliancePerceptions(prev => ({
-                                  ...prev,
-                                  [String(app.id)]: 'custom'
-                                }));
-                                setOverallPerception('custom'); // Flag overall customized
-                              }}
-                              className="flex-1 h-1 bg-white/10 rounded-lg appearance-none cursor-pointer accent-primary"
-                            />
-                            <span className="text-[10px] text-volt-pink font-semibold font-mono whitespace-nowrap min-w-[32px] text-right">
-                              {currentHours.toFixed(1)}h
-                            </span>
+                              const label = tier === 'low' ? 'Low' : tier === 'medium' ? 'Med' : 'Avg';
+                              return (
+                                <button
+                                  key={tier}
+                                  type="button"
+                                  onClick={() => {
+                                    let hours = 4;
+                                    if (tier === 'medium') hours = 12;
+                                    else if (tier === 'average') hours = 20;
+                                    setCheckInApplianceHours(prev => ({
+                                      ...prev,
+                                      [String(app.id)]: hours
+                                    }));
+                                    setAppliancePerceptions(prev => ({
+                                      ...prev,
+                                      [String(app.id)]: tier === 'low' ? 'below' : tier === 'medium' ? 'normal' : 'above'
+                                    }));
+                                    setOverallPerception('custom');
+                                  }}
+                                  className={`py-1.5 px-2.5 rounded-lg text-[10px] font-semibold border transition-all cursor-pointer ${
+                                    active
+                                      ? 'bg-primary text-slate-950 border-primary shadow-[0_0_8px_rgba(0,229,255,0.2)] font-bold'
+                                      : 'bg-transparent border-white/10 hover:border-white/20 text-gray-400'
+                                  }`}
+                                >
+                                  {label}
+                                </button>
+                              );
+                            })}
                           </div>
                         </div>
                       );
@@ -1035,50 +1021,91 @@ export default function Dashboard() {
 
               {/* Fallback Manual Entry form */}
               {bulkBills.length === 0 && !isExtracting && (
-                <form onSubmit={handleManualDashboardUpload} className="border-t border-slate-800 pt-4 space-y-4">
-                  <h4 className="text-xs font-bold uppercase text-slate-400 tracking-wider">Enter Manually Instead</h4>
-                  <div className="grid grid-cols-3 gap-3">
-                    <div>
-                      <label htmlFor="dash_month_manual" className="block text-[10px] text-gray-400 mb-1.5">Billing Month</label>
-                      <input
-                        id="dash_month_manual"
-                        type="month"
-                        value={manualMonth}
-                        onChange={e => setManualMonth(e.target.value)}
-                        className="w-full px-3 py-2 bg-slate-900 border border-[#1e293b] rounded-lg text-white text-xs focus:outline-none focus:border-primary"
-                      />
-                    </div>
-                    <div>
-                      <label htmlFor="dash_amount_manual" className="block text-[10px] text-gray-400 mb-1.5">Amount (₹)</label>
-                      <input
-                        id="dash_amount_manual"
-                        type="number"
-                        placeholder="e.g. 3500"
-                        value={manualAmount}
-                        onChange={e => setManualAmount(e.target.value)}
-                        className="w-full px-3 py-2 bg-slate-900 border border-[#1e293b] rounded-lg text-white text-xs focus:outline-none focus:border-primary"
-                      />
-                    </div>
-                    <div>
-                      <label htmlFor="dash_units_manual" className="block text-[10px] text-gray-400 mb-1.5">Units (kWh)</label>
-                      <input
-                        id="dash_units_manual"
-                        type="number"
-                        placeholder="e.g. 420"
-                        value={manualUnits}
-                        onChange={e => setManualUnits(e.target.value)}
-                        className="w-full px-3 py-2 bg-slate-900 border border-[#1e293b] rounded-lg text-white text-xs focus:outline-none focus:border-primary"
-                      />
-                    </div>
-                  </div>
+                <div className="border border-white/5 rounded-xl overflow-hidden mt-4">
                   <button
-                    type="submit"
-                    disabled={claimingCheckIn}
-                    className="w-full py-2.5 bg-slate-800 hover:bg-slate-700 text-primary border border-primary/20 rounded-lg text-xs font-bold transition-all cursor-pointer"
+                    type="button"
+                    onClick={() => setShowManualForm(!showManualForm)}
+                    className="w-full bg-white/[0.02] px-4 py-3 flex items-center justify-between hover:bg-white/[0.04] transition-colors cursor-pointer"
                   >
-                    {claimingCheckIn ? 'Calibrating...' : 'Validate & Calibrate Bill'}
+                    <div className="flex items-center gap-2">
+                      <Sparkles className="size-4 text-primary flex-shrink-0" />
+                      <p className="text-xs font-bold uppercase tracking-wider text-white">Enter Current or Historical Bills Manually</p>
+                    </div>
+                    <ChevronDown className={`size-4 text-slate-400 transition-transform duration-200 ${showManualForm ? 'rotate-180' : ''}`} />
                   </button>
-                </form>
+
+                  {showManualForm && (
+                    <form onSubmit={handleManualDashboardUpload} className="p-4 space-y-4 text-left bg-white/[0.01] border-t border-white/5">
+                      <div className="grid grid-cols-1 md:grid-cols-[1.5fr_1.2fr_auto_1.2fr] gap-3 items-end">
+                        <div>
+                          <label className="block text-[11px] font-bold uppercase tracking-wider text-gray-400 mb-2">Billing Month</label>
+                          <input
+                            type="month"
+                            value={manualMonth}
+                            onChange={e => setManualMonth(e.target.value)}
+                            className="w-full px-4 py-2 bg-slate-900 border border-[#1e293b] rounded-lg text-xs text-white focus:outline-none focus:border-primary [color-scheme:dark]"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-[11px] font-bold uppercase tracking-wider text-gray-400 mb-2">Amount (₹)</label>
+                          <input
+                            type="number"
+                            value={manualAmount}
+                            placeholder="e.g. 2400"
+                            onChange={e => {
+                              const val = e.target.value;
+                              setManualAmount(val);
+                              if (isManualLocked && val) {
+                                const calculated = calculateUnitsFromBill(parseFloat(val));
+                                setManualUnits(String(calculated));
+                              }
+                            }}
+                            className="w-full px-4 py-2 bg-slate-900 border border-[#1e293b] rounded-lg text-xs text-white focus:outline-none focus:border-primary"
+                          />
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={() => setIsManualLocked(!isManualLocked)}
+                          className={`p-2 rounded-lg border transition-all flex items-center justify-center cursor-pointer mb-[1px] ${
+                            isManualLocked 
+                              ? 'bg-primary/20 border-primary/50 text-primary' 
+                              : 'bg-slate-800 border-[#1e293b] text-gray-400 hover:text-white'
+                          }`}
+                          title={isManualLocked ? "Tariff Auto-Calculation Locked" : "Tariff Auto-Calculation Unlocked"}
+                        >
+                          {isManualLocked ? <Lock className="size-4" /> : <Unlock className="size-4" />}
+                        </button>
+
+                        <div>
+                          <label className="block text-[11px] font-bold uppercase tracking-wider text-gray-400 mb-2">Units (kWh)</label>
+                          <input
+                            type="number"
+                            value={manualUnits}
+                            placeholder="e.g. 300"
+                            onChange={e => {
+                              const val = e.target.value;
+                              setManualUnits(val);
+                              if (isManualLocked && val) {
+                                const calculated = calculateBillFromUnits(parseFloat(val));
+                                setManualAmount(String(calculated));
+                              }
+                            }}
+                            className="w-full px-4 py-2 bg-slate-900 border border-[#1e293b] rounded-lg text-xs text-white focus:outline-none focus:border-primary"
+                          />
+                        </div>
+                      </div>
+
+                      <button
+                        type="submit"
+                        disabled={claimingCheckIn}
+                        className="w-full py-2.5 bg-slate-800 hover:bg-slate-700 text-primary border border-primary/20 rounded-lg text-xs font-bold transition-all cursor-pointer mt-2"
+                      >
+                        {claimingCheckIn ? 'Calibrating...' : 'Validate & Calibrate Bill'}
+                      </button>
+                    </form>
+                  )}
+                </div>
               )}
             </div>
           </div>
