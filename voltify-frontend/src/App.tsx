@@ -6,6 +6,7 @@ import VerifyOTP from './pages/auth/VerifyOTP'
 import Onboarding from './pages/onboarding'
 import Dashboard from './pages/Dashboard'
 import Leaderboard from './pages/Leaderboard'
+import Predictions from './pages/Predictions'
 
 export default function App() {
   return (
@@ -18,6 +19,7 @@ export default function App() {
         <Route path="/onboarding" element={<Onboarding />} />
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/leaderboard" element={<Leaderboard />} />
+        <Route path="/predictions" element={<Predictions />} />
       </Routes>
     </BrowserRouter>
   )
