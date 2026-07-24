@@ -19,16 +19,16 @@ const CustomTooltip = ({ active, payload }: any) => {
   if (!active || !payload || payload.length === 0) return null;
   const d = payload[0].payload as ApplianceItem;
   return (
-    <div className="bg-[#111] border border-[#333] rounded-xl px-4 py-3 shadow-2xl text-xs">
-      <p className="font-semibold text-on-surface mb-1">
+    <div className="bg-slate-950/90 backdrop-blur-md border border-white/10 rounded-xl px-4 py-3 shadow-2xl text-xs z-50 text-white">
+      <p className="font-semibold text-white mb-1">
         {d.icon} {d.name}
       </p>
-      <p style={{ color: d.color }}>{Number(d.units).toFixed(1)} kWh</p>
+      <p style={{ color: d.color }} className="font-bold">{Number(d.units).toFixed(1)} kWh</p>
       {d.percentage !== undefined && (
-        <p className="text-on-surface-variant mt-0.5">{Number(d.percentage).toFixed(1)}%</p>
+        <p className="text-gray-300 mt-0.5">{Number(d.percentage).toFixed(1)}% of total</p>
       )}
       {d.cost !== undefined && d.cost > 0 && (
-        <p className="text-on-surface-variant">≈ ₹{Number(d.cost).toFixed(0)}</p>
+        <p className="text-gray-400">≈ ₹{Number(d.cost).toFixed(0)}</p>
       )}
     </div>
   );
@@ -52,7 +52,7 @@ export default function ApplianceAllocationChart({ applianceBreakdown }: Applian
         <Pie
           data={data}
           cx="50%"
-          cy="46%"
+          cy="50%"
           innerRadius={42}
           outerRadius={62}
           paddingAngle={3}
@@ -66,7 +66,7 @@ export default function ApplianceAllocationChart({ applianceBreakdown }: Applian
           ))}
         </Pie>
 
-        <text x="50%" y="46%" textAnchor="middle" dominantBaseline="middle">
+        <text x="50%" y="50%" textAnchor="middle" dominantBaseline="middle">
           <tspan x="50%" dy="-0.3em" fill="#ededed" fontSize={14} fontWeight={700}>
             {totalUnits.toFixed(0)}
           </tspan>
@@ -76,17 +76,6 @@ export default function ApplianceAllocationChart({ applianceBreakdown }: Applian
         </text>
 
         <Tooltip content={<CustomTooltip />} />
-        <Legend 
-          layout="horizontal" 
-          align="center" 
-          verticalAlign="bottom" 
-          iconSize={8} 
-          iconType="circle" 
-          formatter={(value, entry: any) => {
-            const item = entry.payload as ApplianceItem;
-            return <span className="text-[10px] text-gray-300 font-sans">{item.name} ({item.percentage?.toFixed(0)}%)</span>;
-          }}
-        />
       </PieChart>
     </ResponsiveContainer>
   );
