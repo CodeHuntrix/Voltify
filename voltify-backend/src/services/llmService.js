@@ -88,20 +88,53 @@ function parseBillTextFallback(text) {
     }
   }
 
+  // Match TANGEDCO specific READING line: READING <final> <initial> <mf> <consumption>
+  const readingLineMatch = text.match(/READING\s+([0-9.]+)\s+([0-9.]+)\s+([0-9.]+)\s+([0-9.]+)/i);
+  if (readingLineMatch) {
+    const finalVal = parseFloat(readingLineMatch[1]);
+    const initialVal = parseFloat(readingLineMatch[2]);
+    const consumptionVal = parseFloat(readingLineMatch[4]);
+    if (consumptionVal > 10 && consumptionVal < 15000) {
+      units = Math.round(consumptionVal);
+      console.log(`[llmService] Matched consumption units directly from READING line: ${units}`);
+    } else if (finalVal > initialVal) {
+      units = Math.round(finalVal - initialVal);
+      console.log(`[llmService] Calculated units from READING line readings: ${finalVal} - ${initialVal} = ${units}`);
+    }
+  }
+
   // Regex to match energy units (e.g. 450 units, 450 kWh, consumption: 320)
   const unitsRegexes = [
+    /Consumption\s*\[After\s+MF\s+&\s+DT\s+Loss\]\s*[:\-]?\s*([0-9]+(?:\.[0-9]+)?)/is,
+    /Consumption\s*\(.*?MF.*?Loss.*?\)\s*[:\-]?\s*([0-9]+(?:\.[0-9]+)?)/is,
     /([0-9,]+)\s*(?:kwh|units|consumption)/i,
     /(?:total\s+)?units\s*(?:consumed)?\s*[:=-]?\s*([0-9,]+)/i,
     /consumption\s*[:=-]?\s*([0-9,]+)/i
   ];
 
-  for (const regex of unitsRegexes) {
-    const match = text.match(regex);
-    if (match && match[1]) {
-      const cleanVal = parseInt(match[1].replace(/,/g, ''), 10);
-      if (cleanVal > 10 && cleanVal < 15000) {
-        units = cleanVal;
-        break;
+  if (units === 400) {
+    for (const regex of unitsRegexes) {
+      const match = text.match(regex);
+      if (match && match[1]) {
+        const cleanVal = parseInt(match[1].replace(/,/g, ''), 10);
+        if (cleanVal > 10 && cleanVal < 15000) {
+          units = cleanVal;
+          break;
+        }
+      }
+    }
+  }
+
+  // Calculate units from readings if still default or unmatched
+  if (units === 400) {
+    const finalMatch = text.match(/(?:final|current|present|new)\s*reading\s*[:\-]?\s*([0-9]+(?:\.[0-9]+)?)/i);
+    const initialMatch = text.match(/(?:initial|previous|old)\s*reading\s*[:\-]?\s*([0-9]+(?:\.[0-9]+)?)/i);
+    if (finalMatch && initialMatch) {
+      const finalVal = parseFloat(finalMatch[1]);
+      const initialVal = parseFloat(initialMatch[1]);
+      if (finalVal > initialVal) {
+        units = Math.round(finalVal - initialVal);
+        console.log(`[llmService] Calculated units from readings: ${finalVal} - ${initialVal} = ${units}`);
       }
     }
   }
@@ -242,8 +275,29 @@ module.exports = {
       }
 
       const extracted = JSON.parse(content);
-      if (typeof extracted.bill_amount !== 'number' || typeof extracted.units !== 'number') {
-        throw new Error('Groq returned invalid JSON structure');
+      console.log('[llmService] Groq Raw Response:', extracted);
+
+      const fallback = parseBillTextFallback(text);
+
+      // Validate and correct units if LLM returns default/hallucinated/invalid values
+      if (
+        !extracted.units ||
+        extracted.units === 400 ||
+        extracted.units < 10 ||
+        extracted.units > 15000
+      ) {
+        console.log(`[llmService] Correcting units from LLM (${extracted.units}) using fallback value (${fallback.units})`);
+        extracted.units = fallback.units;
+      }
+
+      // Validate and correct bill amount
+      if (
+        !extracted.bill_amount ||
+        extracted.bill_amount === 3200 ||
+        extracted.bill_amount < 10
+      ) {
+        console.log(`[llmService] Correcting bill_amount from LLM (${extracted.bill_amount}) using fallback value (${fallback.bill_amount})`);
+        extracted.bill_amount = fallback.bill_amount;
       }
 
       // Normalize billing_month to YYYY-MM or null
@@ -251,10 +305,10 @@ module.exports = {
         const cleaned = extracted.billing_month.trim();
         extracted.billing_month = /^\d{4}-\d{2}$/.test(cleaned) ? cleaned : null;
       } else {
-        extracted.billing_month = null;
+        extracted.billing_month = fallback.billing_month;
       }
 
-      console.log('[llmService] Successfully parsed bill text via Groq:', extracted);
+      console.log('[llmService] Successfully parsed & validated bill text:', extracted);
       return extracted;
     } catch (e) {
       console.warn(`[llmService] Groq statement parsing failed: ${e.message}. Using regex fallback.`);

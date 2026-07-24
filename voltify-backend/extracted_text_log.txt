@@ -1,0 +1,327 @@
+
+
+--- FILE: SAMPLE_BILL_4.pdf ---
+TAMILNADU GENERATION AND DISTRIBUTION CORPORATION LIMITED
+TANGEDCO
+Registered Office : No:144, NPKRR Maaligai, Anna Salai, Chennai - 600 002
+Tax Invoice for LT Current Consumption Charges for the Month of June 2026
+Section TOWN/SAIBABA COLONY GSTN No: 33AADCT4784E1ZC
+Circle CBE-Metro Invoice No: L564260614056789 /
+Date:
+14/06/2026
+Distribution SAIBABA COLONY Tariff Applied LA1A Sanctioned Load 6.0 KW
+Servie Connection Number 07-063-029-5821 Phase 3 phase Invoice Type INVOICE
+Name/Address & GST of the Consumer CT/Non-CT Non-CT Place of Supply Tamil Nadu
+Priya Dharshini S
+9, Bharathi Nagar Main Road, Saibaba Colony, Coimbatore North
+Meter No: 45890123 Supply Type Regular
+State: TAMILNADU State Code 33 Solar RTS NO Reverse Charge NO
+Consumer GST No: Welding NO Billing Cycle Bi-Monthly
+Pay This Bill By Online in
+https://www.tnebnet.org/qwp/qpay
+Bill Period 10/04/2026-
+14/06/2026 மின்னகம்
+98123 45670
+Bill Amount Rs.1,678/-
+Due Date 29/06/2026
+Energy
+Consumption :
+Final
+Reading
+Initial
+Reading
+MF Consumption
+[After MF &
+DT Loss] :
+Max Dmd Recorded / with MF /
+PF
+READING 705.0 375.0 1 375.0 0.00 / 0.0 / 0.0
+DATE 14/06/2026 10/04/2026
+STATUS Normal
+SAVE ELECTRICITY
+SECURITY DEPOSIT
+Balance as of 01-04-2026 0.00
+Interest Credited on above after TDS 0.00
+Collection During the Year 4500.00
+Refund made in the Year 0.00
+Balance as of 14/06/2026 3800.00
+MCD as of 14/06/2026 0.00
+OLD ARREARS /CREDITS
+Particulars Period
+Total - 0.00
+ADVANCE CC ACCOUNT
+Balance as of 10/04/2026 0.00
+Collection During the Period 0.00
+Interest Allowed 0.00
+Adjusted (including this Bill) 0.00
+Balance as of 14/06/2026 0.00
+PARTICULARS HSN/SAC Base Amount
+Rs.
+CGST
+@9%
+SGST
+@9%
+Invoice Amount
+Rs.
+Energy Charges 2716
+0000
+3350.00 3350.00
+Fixed Charges 2716
+0000
+Sub Total (a) 3350.00 3350.00
+Less:
+Govt Subsidy 2716
+0000
+-1672.00 -1672.00
+Sub Total (b) -1672.00 -1672.00
+Welding Sur Chr 996 912
+Excess MD Charges 996 912
+Penalty for LPF 996 912
+Net Work Charges 998 631
+Sub Total (c) 0.00 0.00 0.00 0.00
+Electricity Tax
+TCS /TDS [u/s 206(1C)] 0.00 0.00 0.00 0.00
+Sub Total (d) 0.00 0.00 0.00 0.00
+Other Charges 996 912
+ASD Demand
+Old Arrears
+Sub Total (e) 0.00 0.00 0.00 0.00
+Less:
+Adjustments
+Advance CC Adj
+Refund Of SD
+Sub Total (f) 0.00 0.00 0.00 0.00
+Round off (g) +0.00 +0.00
+Net Payable Amt (a+b+c+d+e-
+f+g)
+1678.00 0.00 0.00 1678.00
+(Rupees:One thousand Six hundred Seventy Eight only)
+Note:1.Bill amount shall be payable within the due date to avoid disconnection as per Sec 56(1) of Electricity Act 2003.
+2.Payment after due date will attract belated payment surcharge and other charges as applicable
+3.This is system generated invoice.Does not require signature
+Acronyms:
+TDS - Tax Deducted at Source: MCD – Meter Caution Deposit ASD – Additional Security Deposit
+TCS - Tax collected at source SAC - Services Accounting Codes SD – Security Deposit
+CC – Current Consumption MF – Multiple Factor MD – Maximum Demand
+HSN – Harmonized System of Nomenclature LPF – Low Power Factor RTS – Roof Top Solar
+GST - Goods and Services Tax CT – Current Transformer LT - Low Tension
+Asst Engineer/TOWN/SAIBABA COLONY
+-------------------------
+
+
+--- FILE: SAMPLE_BILL_3.pdf ---
+TAMILNADU GENERATION AND DISTRIBUTION CORPORATION LIMITED
+TANGEDCO
+Registered Office : No:144, NPKRR Maaligai, Anna Salai, Chennai - 600 002
+Tax Invoice for LT Current Consumption Charges for the Month of March 2025
+Section TOWN/GANDHIPURAM GSTN No: 33AADCT4784E1ZC
+Circle CBE-Metro Invoice No: L563250312045678 /
+Date:
+12/03/2025
+Distribution GANDHIPURAM Tariff Applied LA1A Sanctioned Load 4.0 KW
+Servie Connection Number 02-041-018-4567 Phase Single phase Invoice Type INVOICE
+Name/Address & GST of the Consumer CT/Non-CT Non-CT Place of Supply Tamil Nadu
+Suresh Kumar M
+15, Nehru Street, Gandhipuram, Coimbatore North
+Meter No: 30567812 Supply Type Regular
+State: TAMILNADU State Code 33 Solar RTS NO Reverse Charge NO
+Consumer GST No: Welding NO Billing Cycle Bi-Monthly
+Pay This Bill By Online in
+https://www.tnebnet.org/qwp/qpay
+Bill Period 09/01/2025-
+12/03/2025 மின்னகம்
+91234 56789
+Bill Amount Rs.1,425/-
+Due Date 27/03/2025
+Energy
+Consumption :
+Final
+Reading
+Initial
+Reading
+MF Consumption
+[After MF &
+DT Loss] :
+Max Dmd Recorded / with MF /
+PF
+READING 620.0 245.0 1 375.0 0.00 / 0.0 / 0.0
+DATE 12/03/2025 09/01/2025
+STATUS Normal
+SAVE ELECTRICITY
+SECURITY DEPOSIT
+Balance as of 01-04-2024 0.00
+Interest Credited on above after TDS 0.00
+Collection During the Year 3800.00
+Refund made in the Year 0.00
+Balance as of 12/03/2025 3800.00
+MCD as of 12/03/2025 0.00
+OLD ARREARS /CREDITS
+Particulars Period
+Total - 0.00
+ADVANCE CC ACCOUNT
+Balance as of 09/01/2025 0.00
+Collection During the Period 0.00
+Interest Allowed 0.00
+Adjusted (including this Bill) 0.00
+Balance as of 12/03/2025 0.00
+PARTICULARS HSN/SAC Base Amount
+Rs.
+CGST
+@9%
+SGST
+@9%
+Invoice Amount
+Rs.
+Energy Charges 2716
+0000
+2850.00 2850.00
+Fixed Charges 2716
+0000
+Sub Total (a) 2850.00 2850.00
+Less:
+Govt Subsidy 2716
+0000
+-1425.00 -1425.00
+Sub Total (b) -1425.00 -1425.00
+Welding Sur Chr 996 912
+Excess MD Charges 996 912
+Penalty for LPF 996 912
+Net Work Charges 998 631
+Sub Total (c) 0.00 0.00 0.00 0.00
+Electricity Tax
+TCS /TDS [u/s 206(1C)] 0.00 0.00 0.00 0.00
+Sub Total (d) 0.00 0.00 0.00 0.00
+Other Charges 996 912
+ASD Demand
+Old Arrears
+Sub Total (e) 0.00 0.00 0.00 0.00
+Less:
+Adjustments
+Advance CC Adj
+Refund Of SD
+Sub Total (f) 0.00 0.00 0.00 0.00
+Round off (g) +0.00 +0.00
+Net Payable Amt (a+b+c+d+e-
+f+g)
+1425.00 0.00 0.00 1425.00
+(Rupees:One thousand Four hundred Twenty Five only)
+Note:1.Bill amount shall be payable within the due date to avoid disconnection as per Sec 56(1) of Electricity Act 2003.
+2.Payment after due date will attract belated payment surcharge and other charges as applicable
+3.This is system generated invoice.Does not require signature
+Acronyms:
+TDS - Tax Deducted at Source: MCD – Meter Caution Deposit ASD – Additional Security Deposit
+TCS - Tax collected at source SAC - Services Accounting Codes SD – Security Deposit
+CC – Current Consumption MF – Multiple Factor MD – Maximum Demand
+HSN – Harmonized System of Nomenclature LPF – Low Power Factor RTS – Roof Top Solar
+GST - Goods and Services Tax CT – Current Transformer LT - Low Tension
+Asst Engineer/TOWN/GANDHIPURAM
+-------------------------
+
+
+--- FILE: SAMPLE_BILL_2.pdf ---
+TAMILNADU GENERATION AND DISTRIBUTION CORPORATION LIMITED
+TANGEDCO
+Registered Office : No:144, NPKRR Maaligai, Anna Salai, Chennai - 600 002
+Tax Invoice for LT Current Consumption Charges for the Month of December 2024
+Section TOWN/RS PURAM GSTN No: 33AADCT4784E1ZC
+Circle CBE-Metro Invoice No: L562490112034521 /
+Date:
+02/12/2024
+Distribution R.S.PURAM Tariff Applied LA1A Sanctioned Load 7.5 KW
+Servie Connection Number 04-015-027-3312 Phase 3 phase Invoice Type INVOICE
+Name/Address & GST of the Consumer CT/Non-CT Non-CT Place of Supply Tamil Nadu
+Kavitha Ramesh
+22, Gandhi Nagar Extension, R.S.Puram, Coimbatore North
+Meter No: 21456789 Supply Type Regular
+State: TAMILNADU State Code 33 Solar RTS NO Reverse Charge NO
+Consumer GST No: Welding NO Billing Cycle Bi-Monthly
+Pay This Bill By Online in
+https://www.tnebnet.org/qwp/qpay
+Bill Period 08/10/2024-
+02/12/2024 மின்னகம்
+98765 43210
+Bill Amount Rs.1,142/-
+Due Date 22/12/2024
+Energy
+Consumption :
+Final
+Reading
+Initial
+Reading
+MF Consumption
+[After MF &
+DT Loss] :
+Max Dmd Recorded / with MF /
+PF
+READING 512.0 140.0 1 372.0 0.00 / 0.0 / 0.0
+DATE 02/12/2024 08/10/2024
+STATUS Normal
+SAVE ELECTRICITY
+SECURITY DEPOSIT
+Balance as of 01-04-2024 0.00
+Interest Credited on above after TDS 0.00
+Collection During the Year 5200.00
+Refund made in the Year 0.00
+Balance as of 02/12/2024 5200.00
+MCD as of 02/12/2024 0.00
+OLD ARREARS /CREDITS
+Particulars Period
+Total - 0.00
+ADVANCE CC ACCOUNT
+Balance as of 08/10/2024 0.00
+Collection During the Period 0.00
+Interest Allowed 0.00
+Adjusted (including this Bill) 0.00
+Balance as of 02/12/2024 0.00
+PARTICULARS HSN/SAC Base Amount
+Rs.
+CGST
+@9%
+SGST
+@9%
+Invoice Amount
+Rs.
+Energy Charges 2716
+0000
+2296.00 2296.00
+Fixed Charges 2716
+0000
+Sub Total (a) 2296.00 2296.00
+Less:
+Govt Subsidy 2716
+0000
+-1154.50 -1154.50
+Sub Total (b) -1154.50 -1154.50
+Welding Sur Chr 996 912
+Excess MD Charges 996 912
+Penalty for LPF 996 912
+Net Work Charges 998 631
+Sub Total (c) 0.00 0.00 0.00 0.00
+Electricity Tax
+TCS /TDS [u/s 206(1C)] 0.00 0.00 0.00 0.00
+Sub Total (d) 0.00 0.00 0.00 0.00
+Other Charges 996 912
+ASD Demand
+Old Arrears
+Sub Total (e) 0.00 0.00 0.00 0.00
+Less:
+Adjustments
+Advance CC Adj
+Refund Of SD
+Sub Total (f) 0.00 0.00 0.00 0.00
+Round off (g) +0.50 +0.50
+Net Payable Amt (a+b+c+d+e-
+f+g)
+1142.00 0.00 0.00 1142.00
+(Rupees:One thousand One hundred Forty Two only)
+Note:1.Bill amount shall be payable within the due date to avoid disconnection as per Sec 56(1) of Electricity Act 2003.
+2.Payment after due date will attract belated payment surcharge and other charges as applicable
+3.This is system generated invoice.Does not require signature
+Acronyms:
+TDS - Tax Deducted at Source: MCD – Meter Caution Deposit ASD – Additional Security Deposit
+TCS - Tax collected at source SAC - Services Accounting Codes SD – Security Deposit
+CC – Current Consumption MF – Multiple Factor MD – Maximum Demand
+HSN – Harmonized System of Nomenclature LPF – Low Power Factor RTS – Roof Top Solar
+GST - Goods and Services Tax CT – Current Transformer LT - Low Tension
+Asst Engineer/TOWN/RS PURAM
+-------------------------
