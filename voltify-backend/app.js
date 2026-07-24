@@ -9,6 +9,7 @@ import leaderboardRoutes from './src/routes/leaderboardRoutes.js';
 import profileRoutes from './src/routes/profileRoutes.js';
 import settingsRoutes from './src/routes/settingsRoutes.js';
 import coachRoutes from './src/routes/coachRoutes.js';
+import notificationRoutes from './src/routes/notificationRoutes.js';
 
 dotenv.config();
 
@@ -26,6 +27,7 @@ app.use('/api/leaderboard', leaderboardRoutes);
 app.use('/api/profile', profileRoutes);
 app.use('/api/settings', settingsRoutes);
 app.use('/api/coach', coachRoutes);
+app.use('/api/notification', notificationRoutes);
 
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date() });
