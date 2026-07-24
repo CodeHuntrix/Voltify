@@ -1,0 +1,8 @@
+node_modules/
+.env
+*.log
+.DS_Store
+dist/
+voltify-frontend/node_modules/
+voltify-backend/node_modules/
+git_backdate_commits.py
