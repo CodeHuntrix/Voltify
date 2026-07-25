@@ -40,12 +40,7 @@ const getLeaderboard = async (req, res) => {
     };
   });
 
-  const mockEntries = (mockLeaderboardUsers[type] || []).map(m => ({
-    ...m,
-    is_current_user: false,
-  }));
-
-  const combined = [...realEntries, ...mockEntries]
+  const combined = [...realEntries]
     .sort((a, b) => b.coins - a.coins)
     .map((entry, index) => ({
       ...entry,
