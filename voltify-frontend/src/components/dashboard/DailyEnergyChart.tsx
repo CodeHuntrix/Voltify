@@ -168,9 +168,10 @@ export default function DailyEnergyChart({ dailyHistory }: DailyEnergyChartProps
         </button>
       </div>
 
-      <div className="flex-1 w-full overflow-x-auto select-none scrollbar-thin">
-        <div style={{ minWidth: zoomMode === '7d' ? '100%' : `${Math.max(100, data.length * 25)}px`, height: '240px' }}>
-          <ResponsiveContainer width="99%" height="100%">
+      <div className="flex-1 w-full select-none">
+        <div style={{ width: '100%', height: '240px' }}>
+          <ResponsiveContainer width="100%" height="100%">
+
 
             <BarChart data={displayedData} margin={{ top: 5, right: 10, left: -10, bottom: 0 }} barGap={4}>
               <CartesianGrid
