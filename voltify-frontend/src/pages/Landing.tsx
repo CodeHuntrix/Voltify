@@ -48,12 +48,11 @@ function DemoEntryModal({ onClose }: DemoModalProps) {
         tier: 3,
         coins: 420,
         streak_days: 12,
-        onboarding_complete: true,
         household_type: DEMO_PROFILE.household_type,
         location: DEMO_PROFILE.location,
         home_type: DEMO_PROFILE.home_type,
         appliance_count: DEMO_PROFILE.appliances.length,
-      },
+      } as any,
       'demo-mock-jwt-token'
     );
 
@@ -72,12 +71,31 @@ function DemoEntryModal({ onClose }: DemoModalProps) {
     const history = Array.from({ length: 30 }, (_, i) => {
       const d = new Date(); d.setDate(d.getDate() - (29 - i));
       const base = DEMO_PROFILE.units_per_month / 30;
-      return { date: d.toISOString().split('T')[0], units: parseFloat((base * (0.85 + Math.random() * 0.3)).toFixed(1)) };
+      return { 
+        date: d.toISOString().split('T')[0], 
+        units: parseFloat((base * (0.85 + Math.random() * 0.3)).toFixed(1)),
+        cost: parseFloat((base * 8.0).toFixed(0)),
+        label: `${d.getDate()}/${d.getMonth() + 1}`
+      };
     });
 
     setOnboarding({
-      ...DEMO_PROFILE,
+      household_type: DEMO_PROFILE.household_type,
+      location: DEMO_PROFILE.location,
+      home_type: DEMO_PROFILE.home_type,
+      bill_amount: DEMO_PROFILE.bill_amount,
       units_per_month: DEMO_PROFILE.units_per_month,
+      appliances: DEMO_PROFILE.appliances.map(a => ({
+        id: a.id,
+        name: a.name,
+        icon: a.icon,
+        power_kw: a.power_kw,
+        avg_hours_day: a.avg_hours_day,
+        seasonality: a.seasonality as any
+      })),
+      estimated_units: DEMO_PROFILE.estimated_units,
+      accuracy_pct: DEMO_PROFILE.accuracy_pct,
+      prev_bills: DEMO_PROFILE.prev_bills
     });
     setApplianceBreakdown(breakdown);
     setDailyHistory(history);

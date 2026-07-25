@@ -155,34 +155,34 @@ export default function Leaderboard() {
             </h3>
             
             <div className="space-y-3 text-xs font-sans">
-              <div className={`border border-outline-variant/30 p-3 rounded-lg flex justify-between items-center ${user?.streak_days >= 7 ? '' : 'opacity-60'}`}>
+              <div className={`border border-outline-variant/30 p-3 rounded-lg flex justify-between items-center ${(user?.streak_days || 0) >= 7 ? '' : 'opacity-60'}`}>
                 <div>
                   <h4 className="font-semibold text-on-surface">7-Day Saver</h4>
                   <p className="text-[10px] text-on-surface-variant">Unlock 1.15x Saving Multiplier</p>
                 </div>
                 <span className={`text-[10px] font-mono px-2 py-0.5 rounded uppercase font-bold ${
-                  user?.streak_days >= 7 ? 'bg-primary/20 text-primary' : 'bg-outline-variant/30 text-outline'
-                }`}>{user?.streak_days >= 7 ? 'Active' : 'Locked'}</span>
+                  (user?.streak_days || 0) >= 7 ? 'bg-primary/20 text-primary' : 'bg-outline-variant/30 text-outline'
+                }`}>{(user?.streak_days || 0) >= 7 ? 'Active' : 'Locked'}</span>
               </div>
 
-              <div className={`border border-outline-variant/30 p-3 rounded-lg flex justify-between items-center ${user?.streak_days >= 30 ? '' : 'opacity-60'}`}>
+              <div className={`border border-outline-variant/30 p-3 rounded-lg flex justify-between items-center ${(user?.streak_days || 0) >= 30 ? '' : 'opacity-60'}`}>
                 <div>
                   <h4 className="font-semibold text-on-surface">30-Day Sovereign</h4>
                   <p className="text-[10px] text-on-surface-variant">Unlock 1.35x Saving Multiplier</p>
                 </div>
                 <span className={`text-[10px] font-mono px-2 py-0.5 rounded uppercase font-bold ${
-                  user?.streak_days >= 30 ? 'bg-primary/20 text-primary' : 'bg-outline-variant/30 text-outline'
-                }`}>{user?.streak_days >= 30 ? 'Active' : 'Locked'}</span>
+                  (user?.streak_days || 0) >= 30 ? 'bg-primary/20 text-primary' : 'bg-outline-variant/30 text-outline'
+                }`}>{(user?.streak_days || 0) >= 30 ? 'Active' : 'Locked'}</span>
               </div>
 
-              <div className={`border border-outline-variant/30 p-3 rounded-lg flex justify-between items-center ${user?.streak_days >= 90 ? '' : 'opacity-60'}`}>
+              <div className={`border border-outline-variant/30 p-3 rounded-lg flex justify-between items-center ${(user?.streak_days || 0) >= 90 ? '' : 'opacity-60'}`}>
                 <div>
                   <h4 className="font-semibold text-on-surface">90-Day Grid Master</h4>
                   <p className="text-[10px] text-on-surface-variant">Unlock 1.6x Saving Multiplier</p>
                 </div>
                 <span className={`text-[10px] font-mono px-2 py-0.5 rounded uppercase font-bold ${
-                  user?.streak_days >= 90 ? 'bg-primary/20 text-primary' : 'bg-outline-variant/30 text-outline'
-                }`}>{user?.streak_days >= 90 ? 'Active' : 'Locked'}</span>
+                  (user?.streak_days || 0) >= 90 ? 'bg-primary/20 text-primary' : 'bg-outline-variant/30 text-outline'
+                }`}>{(user?.streak_days || 0) >= 90 ? 'Active' : 'Locked'}</span>
               </div>
             </div>
 
