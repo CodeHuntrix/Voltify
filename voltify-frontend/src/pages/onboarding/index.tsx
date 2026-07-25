@@ -734,9 +734,17 @@ export default function Onboarding() {
       units: r.units
     })));
     
-    dispatch({ type: 'SET_BILL_DATA', payload: { bill_amount: primary.bill_amount, units: primary.units } });
+    dispatch({ 
+      type: 'SET_BILL_DATA', 
+      payload: { 
+        bill_amount: primary.bill_amount, 
+        units: primary.units, 
+        billing_month: `${primary.billing_month}-01` 
+      } 
+    });
     dispatch({ type: 'SET_STEP', payload: 3 });
   };
+
 
 
   const onAppliancesNext = () => {
@@ -840,10 +848,21 @@ export default function Onboarding() {
       },
     ];
 
+    const mappedHomeType = (state.profileData.home_type === 'pg_hostel' || state.profileData.home_type === 'other') 
+      ? 'apartment' as const
+      : state.profileData.home_type as 'apartment' | 'house' | 'villa';
+
+    let mappedHouseholdType: 'bachelor' | 'family' | 'large_family' | 'organization' = 'family';
+    if (state.profileData.household_type === '1_person') {
+      mappedHouseholdType = 'bachelor';
+    } else if (state.profileData.household_type === '5_plus_people') {
+      mappedHouseholdType = 'large_family';
+    }
+
     setOnboarding({
-      household_type: state.profileData.household_type,
+      household_type: mappedHouseholdType,
       location:       state.profileData.location,
-      home_type:      state.profileData.home_type,
+      home_type:      mappedHomeType,
       bill_amount:    state.billData.bill_amount,
       units_per_month: state.billData.units,
       appliances:     currentCalc.appliances,
@@ -862,9 +881,9 @@ export default function Onboarding() {
     setInsights(newInsights);
 
     updateUser({
-      household_type: state.profileData.household_type,
+      household_type: mappedHouseholdType,
       location:       state.profileData.location,
-      home_type:      state.profileData.home_type,
+      home_type:      mappedHomeType,
       appliance_count: currentCalc.appliances.length,
       coins:     user?.coins ? user.coins + 150 : 150,
       streak_days: 1,
