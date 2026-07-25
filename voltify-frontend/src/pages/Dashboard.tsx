@@ -642,36 +642,7 @@ export default function Dashboard() {
         </GlassCard>
       </div>
 
-      {/* Grid: Leaderboard and other metrics */}
-      <div className="mt-8">
-        <div className="max-w-2xl">
-          {/* Leaders board rankings */}
-          <GlassCard className="space-y-4">
-            <h3 className="font-display font-semibold text-sm text-on-surface">DISCOM LEADERBOARD PREVIEW</h3>
-            <div className="space-y-1.5">
-              {leaderboard.slice(0, 5).map((e) => (
-                <div
-                  key={e.name}
-                  className={`flex justify-between items-center p-2 rounded-lg text-xs transition-colors ${
-                    e.is_current_user
-                      ? 'bg-primary/10 border border-primary/20 text-primary font-semibold shadow-sm'
-                      : 'hover:bg-surface text-on-surface-variant hover:text-on-surface'
-                  }`}
-                >
-                  <span className="flex items-center gap-2">
-                    <span className="w-4 text-center font-semibold text-[10px] text-on-surface-variant">#{e.rank}</span>
-                    <span>{e.name}</span>
-                  </span>
-                  <div className="flex items-center gap-3 font-semibold text-on-surface">
-                    <span className="text-tertiary">{e.streak}d</span>
-                    <span>{e.coins} c</span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </GlassCard>
-        </div>
-      </div>
+
 
 
       {/* Grid: Alerts & Smart notifications */}
