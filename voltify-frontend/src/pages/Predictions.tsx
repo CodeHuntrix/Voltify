@@ -2,8 +2,10 @@
 import { useState, useEffect } from 'react';
 import { 
   Zap, Sparkles, BrainCircuit, ArrowRight, Lightbulb, 
-  TrendingUp, Coins, Lock, CheckCircle2, Sliders, Activity, Gauge, Info, Calendar, FileText
+  TrendingUp, Coins, Lock, CheckCircle2, Sliders, Activity, Gauge, Info, Calendar, FileText, AlertTriangle
 } from 'lucide-react';
+import { useAuthStore } from '../store/authStore';
+
 import GlassCard from '../components/ui/GlassCard';
 import { apiService } from '../lib/api';
 import { toast } from 'react-toastify';
@@ -21,6 +23,9 @@ export default function Predictions() {
   const [predictions, setPredictions] = useState<any>({ tomorrow: 12.4, next_week: 85.0, next_month: 340.0 });
   const [billShock, setBillShock] = useState<any>({ risk: 'LOW', probability: 24, projected_bill: 2450 });
   const [activeChallenge, setActiveChallenge] = useState<any>(null);
+  const [anomalyData, setAnomalyData] = useState<any>(null);
+  const { user } = useAuthStore();
+
   
   // What-If Simulation State
   const [simAppliance, setSimAppliance] = useState('Air Conditioner');
@@ -73,10 +78,16 @@ export default function Predictions() {
         if (chalRes?.challenge) {
           setActiveChallenge(chalRes.challenge);
         }
+        if (user?.consumer_no) {
+          apiService.getDiscomAnomalies()
+            .then(res => setAnomalyData(res))
+            .catch(err => console.error("Failed to load smart meter anomalies", err));
+        }
       } catch (err) {
         console.error("Failed to load energy predictions and recommendations", err);
       }
     }
+
     loadPredictionsData();
   }, []);
 
@@ -409,7 +420,86 @@ export default function Predictions() {
           )}
         </GlassCard>
       </div>
+
+      {/* DISCOM User Anomaly Detection Panel */}
+      {user?.consumer_no && (
+        <div className="max-w-4xl mx-auto mt-8">
+          <GlassCard className="space-y-6 border-red-500/20 bg-red-500/[0.01]">
+            <div className="flex items-center gap-2.5 border-b border-white/5 pb-4">
+              <div className="size-8 rounded-lg bg-rose-500/10 border border-rose-500/20 flex items-center justify-center">
+                <AlertTriangle className="size-4 text-rose-400" />
+              </div>
+              <div>
+                <h3 className="font-display font-semibold text-sm text-white">Smart Meter Anomaly Log</h3>
+                <p className="text-[10px] text-gray-400">Heuristics-based voltage and load deviation flags from DISCOM telemetry stream</p>
+              </div>
+            </div>
+
+            {anomalyData && anomalyData.anomalies?.length > 0 ? (
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                  <div className="p-3 bg-white/[0.02] border border-white/5 rounded-xl">
+                    <span className="block text-[9px] text-gray-400 uppercase font-semibold">Total Telemetries</span>
+                    <span className="text-sm font-bold text-white font-mono">{anomalyData.total_readings}</span>
+                  </div>
+                  <div className="p-3 bg-white/[0.02] border border-white/5 rounded-xl">
+                    <span className="block text-[9px] text-gray-400 uppercase font-semibold">Flagged Deviations</span>
+                    <span className="text-sm font-bold text-rose-400 font-mono">{anomalyData.anomaly_count}</span>
+                  </div>
+                  <div className="p-3 bg-white/[0.02] border border-white/5 rounded-xl">
+                    <span className="block text-[9px] text-gray-400 uppercase font-semibold">Deviation Frequency</span>
+                    <span className="text-sm font-bold text-rose-400 font-mono">{anomalyData.anomaly_rate}%</span>
+                  </div>
+                  <div className="p-3 bg-white/[0.02] border border-white/5 rounded-xl">
+                    <span className="block text-[9px] text-gray-400 uppercase font-semibold">Baseline load</span>
+                    <span className="text-sm font-bold text-primary font-mono">{anomalyData.baseline_kw} kW</span>
+                  </div>
+                </div>
+
+                <div className="border border-white/5 rounded-xl overflow-hidden">
+                  <table className="w-full text-left border-collapse text-xs">
+                    <thead>
+                      <tr className="bg-white/[0.02] text-gray-400 font-semibold border-b border-white/5">
+                        <th className="p-3">Time</th>
+                        <th className="p-3">Voltage</th>
+                        <th className="p-3">Load (kW)</th>
+                        <th className="p-3">Heuristic Match</th>
+                        <th className="p-3">Severity</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-white/[0.03]">
+                      {anomalyData.anomalies.map((item: any, idx: number) => (
+                        <tr key={idx} className="hover:bg-white/[0.01] transition-colors">
+                          <td className="p-3 font-mono text-[10px] text-gray-300">
+                            {new Date(item.timestamp).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                          </td>
+                          <td className="p-3 font-mono text-[10px] text-gray-300">{item.voltage_v} V</td>
+                          <td className="p-3 font-mono text-[10px] text-white font-bold">{item.active_power_kw} kW</td>
+                          <td className="p-3 text-[11px] text-gray-300 font-sans">{item.description}</td>
+                          <td className="p-3">
+                            <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full font-mono ${
+                              item.severity === 'HIGH' ? 'bg-red-500/20 text-red-400 border border-red-500/10' : 'bg-amber-500/20 text-amber-400 border border-amber-500/10'
+                            }`}>
+                              {item.severity}
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            ) : (
+              <div className="p-8 text-center text-xs border border-white/5 rounded-xl bg-white/[0.01] space-y-2">
+                <span className="block font-semibold text-emerald-400">✨ Healthy Grid Baseline</span>
+                <span className="block text-gray-400">No voltage fluctuations or load spikes detected in recent smart meter transmissions.</span>
+              </div>
+            )}
+          </GlassCard>
+        </div>
+      )}
     </div>
+
   );
 }
 export { Predictions };

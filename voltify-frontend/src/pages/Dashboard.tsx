@@ -32,7 +32,8 @@ export default function Dashboard() {
   const [fridgeTemp, setFridgeTemp] = useState(2); // Power-heavy 2°C
   const [leaderboard, setLeaderboard] = useState<any[]>([]);
   const [dashboardStats, setDashboardStats] = useState<any>(null);
-  const [usagePeriod, setUsagePeriod] = useState<'daily' | 'weekly' | 'monthly'>('daily');
+  const [usagePeriod, setUsagePeriod] = useState<'hourly' | 'daily' | 'weekly' | 'monthly'>('daily');
+
   const [activeChallenge, setActiveChallenge] = useState<any>(null);
   const [gamificationStats, setGamificationStats] = useState<any>(null);
   const [showCheckInModal, setShowCheckInModal] = useState(false);
@@ -313,9 +314,22 @@ export default function Dashboard() {
   useEffect(() => {
     async function loadUsage() {
       try {
-        const usage = await apiService.getDashboardUsage(usagePeriod);
-        if (usage?.data && Array.isArray(usage.data)) {
-          setDailyHistory(usage.data);
+        if (user?.consumer_no) {
+          // Smart meter user: hourly, daily, weekly (fall back to daily if period is monthly)
+          const p = usagePeriod === 'monthly' ? 'daily' : usagePeriod;
+          if (usagePeriod === 'monthly') setUsagePeriod('daily');
+          const res = await apiService.getDiscomChart(p as 'hourly' | 'daily' | 'weekly');
+          if (res?.data && Array.isArray(res.data)) {
+            setDailyHistory(res.data);
+          }
+        } else {
+          // Standard user: daily, weekly, monthly (fall back to daily if period is hourly)
+          const p = usagePeriod === 'hourly' ? 'daily' : usagePeriod;
+          if (usagePeriod === 'hourly') setUsagePeriod('daily');
+          const usage = await apiService.getDashboardUsage(p as 'daily' | 'weekly' | 'monthly');
+          if (usage?.data && Array.isArray(usage.data)) {
+            setDailyHistory(usage.data);
+          }
         }
       } catch (err) {
         console.error('Failed to load usage history', err);
@@ -325,6 +339,7 @@ export default function Dashboard() {
       loadUsage();
     }
   }, [user, onboarding, usagePeriod]);
+
 
   const handleClaimDailyCheckIn = async (units: number, applianceHours: Record<string, number>) => {
     try {
@@ -477,10 +492,10 @@ export default function Dashboard() {
             Energy Consumption Dashboard
           </h1>
           <p className="text-xs text-on-surface-variant mt-1">
-            Region: <span className="font-mono font-semibold text-primary">{onboarding?.location || 'Chennai'}</span> | Utility Rate: <span className="font-mono text-primary">₹{tariff}/kWh</span>
+            Region: <span className="font-mono font-semibold text-primary">{onboarding?.location || 'Chennai'}</span> | Utility Rate: <span className="font-mono text-primary">₹{typeof tariff === 'number' ? tariff.toFixed(2) : parseFloat(tariff).toFixed(2)}/kWh</span>
           </p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
           <button
             onClick={() => setShowCheckInModal(true)}
             className="px-4 py-2 bg-gradient-to-r from-primary to-blue-500 hover:opacity-90 text-slate-950 transition-all rounded-xl text-xs font-bold shadow-md cursor-pointer border border-primary/20"
@@ -493,13 +508,37 @@ export default function Dashboard() {
           >
             ⚡ Upload Bill
           </button>
+
+          {/* Moved & Miniaturized Stat Cards */}
+          <div className="flex items-center gap-2 bg-surface border border-outline px-4 py-2 rounded-xl text-xs shadow-sm">
+            <Zap className="size-4 text-primary" />
+            <span className="text-on-surface-variant">Avg Daily Load:</span>
+            <span className="font-mono font-semibold text-primary">
+              {dashboardStats?.today?.units > 0 ? `${dashboardStats.today.units}` : `${avgDailyUnits}`} kWh
+            </span>
+          </div>
+
+          <div className="flex items-center gap-2 bg-surface border border-outline px-4 py-2 rounded-xl text-xs shadow-sm">
+            <TrendingUp className="size-4 text-tertiary" />
+            <span className="text-on-surface-variant">Projected Bill:</span>
+            <span className="font-mono font-semibold text-tertiary">
+              {formatCurrency(
+                dashboardStats?.estimated_bill?.projected > 0
+                  ? dashboardStats.estimated_bill.projected
+                  : dynamicProjectedBill
+              )}
+            </span>
+          </div>
+
           <div className="flex items-center gap-2 bg-surface border border-outline px-4 py-2 rounded-xl text-xs shadow-sm">
             <BadgeAlert className="size-4 text-primary" />
-            <span className="text-on-surface-variant">Estimated Disaggregation Accuracy:</span>
+            <span className="text-on-surface-variant">Accuracy:</span>
             <span className="font-mono font-semibold text-primary">{onboarding?.accuracy_pct || 94}%</span>
           </div>
         </div>
       </div>
+
+
 
 
       {/* Grid: Daily Usage Chart & Appliance breakdown */}
@@ -508,7 +547,8 @@ export default function Dashboard() {
         <GlassCard className="col-span-1 lg:col-span-2 flex flex-col justify-between">
           <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4 mb-4">
             <div>
-              <h3 className="font-display font-semibold text-lg text-on-surface">Energy Consumption Index</h3>
+              <h3 className="font-display font-semibold text-lg text-on-surface">Energy Use Chart</h3>
+
               <p className="text-xs text-on-surface-variant mt-0.5">
                 {usagePeriod === 'daily' && `Last ${dailyHistory.length} days of estimated daily load`}
                 {usagePeriod === 'weekly' && `Last ${dailyHistory.length} weeks of aggregated consumption`}
@@ -519,7 +559,10 @@ export default function Dashboard() {
             <div className="flex items-center gap-3">
               {/* Period Selectors */}
               <div className="flex p-0.5 bg-white/5 border border-white/[0.06] rounded-xl text-xs font-semibold shrink-0">
-                {(['daily', 'weekly', 'monthly'] as const).map((p) => (
+                {(user?.consumer_no 
+                  ? (['hourly', 'daily', 'weekly'] as const) 
+                  : (['daily', 'weekly', 'monthly'] as const)
+                ).map((p) => (
                   <button
                     key={p}
                     type="button"
@@ -535,6 +578,7 @@ export default function Dashboard() {
                 ))}
               </div>
             </div>
+
           </div>
 
           <div className="h-64 w-full">
@@ -547,7 +591,7 @@ export default function Dashboard() {
           <div className="mt-4 p-3 bg-white/[0.02] border border-white/[0.04] rounded-xl flex items-start gap-2.5 text-[11px] text-on-surface-variant leading-relaxed">
             <Info className="size-4 text-primary shrink-0 mt-0.5" />
             <p>
-              <span className="font-semibold text-white">Estimation Notice:</span> Voltify disaggregates your consumption patterns using comparative matching algorithms and actual statement calibration. These values represent mathematical projections rather than perfect live meter readings, and may carry a dynamic variance.
+              <span className="font-semibold text-white">Estimation Details:</span> Voltify tracks your energy consumption patterns by matching your appliances and utility statements. These predictions show how much energy you are likely using.
             </p>
           </div>
         </GlassCard>
@@ -556,7 +600,8 @@ export default function Dashboard() {
         <GlassCard className="flex flex-col h-full justify-between">
           <div>
             <div className="flex justify-between items-center mb-1">
-              <h3 className="font-display font-semibold text-lg text-on-surface">Appliance Allocation Index</h3>
+              <h3 className="font-display font-semibold text-lg text-on-surface">Appliance Share</h3>
+
               <span className="flex items-center gap-1.5 text-[10px] uppercase font-mono tracking-wider font-semibold text-primary">
                 <span className="size-1.5 rounded-full bg-primary animate-ping" /> Dynamic Share
               </span>
@@ -661,43 +706,7 @@ export default function Dashboard() {
           </div>
         </div>
       )}
-      {/* Grid: Stats cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 pt-4">
-        {/* Card 1 */}
-        <GlassCard className="relative overflow-hidden group">
-          <div className="absolute top-0 right-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity text-primary">
-            <Zap className="size-10" />
-          </div>
-          <span className="text-xs font-semibold text-on-surface-variant block mb-1">Avg Daily Load</span>
-          <h3 className="font-semibold text-2xl text-on-surface">
-            {dashboardStats?.today?.units > 0 ? `${dashboardStats.today.units} kWh` : `${avgDailyUnits} kWh`}
-          </h3>
-          <p className="text-xs text-on-surface-variant mt-1.5 flex items-center gap-1">
-            Approx.{' '}
-            <span className="font-semibold text-on-surface">
-              ₹{dashboardStats?.today?.cost > 0 ? dashboardStats.today.cost : avgDailyCost}
-            </span>{' '}per day
-          </p>
-        </GlassCard>
 
-        {/* Card 2 */}
-        <GlassCard className="relative overflow-hidden group">
-          <div className="absolute top-0 right-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity text-tertiary">
-            <TrendingUp className="size-10" />
-          </div>
-          <span className="text-xs font-semibold text-on-surface-variant block mb-1">Projected {currentMonth}</span>
-          <h3 className="font-semibold text-2xl text-on-surface">
-            {formatCurrency(
-              dashboardStats?.estimated_bill?.projected > 0
-                ? dashboardStats.estimated_bill.projected
-                : dynamicProjectedBill
-            )}
-          </h3>
-          <p className="text-xs text-on-surface-variant mt-1.5">
-            Target: <span className="font-semibold text-tertiary">-{cssSavings.percentage}%</span> (Saved ₹{cssSavings.money})
-          </p>
-        </GlassCard>
-      </div>
 
       {/* Daily Check-In Modal with Interactive Telemetry Log */}
       {showCheckInModal && (() => {

@@ -20,7 +20,9 @@ export default function Profile() {
     home_type: user?.home_type || 'apartment',
     household_type: user?.household_type || 'family',
     location: user?.location || '',
+    consumer_no: user?.consumer_no || '',
   });
+
 
   if (!user) {
     return (
@@ -46,7 +48,9 @@ export default function Profile() {
         home_type: formData.home_type,
         household_type: formData.household_type,
         location: formData.location,
+        consumer_no: formData.consumer_no,
       });
+
       if (res.user) {
         updateUser(res.user);
       }
@@ -119,7 +123,12 @@ export default function Profile() {
                   <span className="text-on-surface-variant flex items-center gap-1.5"><Zap className="size-3.5 text-sky-400" /> Connected Appliances</span>
                   <p className="font-bold text-on-surface">{user.appliance_count || 0} active</p>
                 </div>
+                <div className="space-y-1">
+                  <span className="text-on-surface-variant flex items-center gap-1.5 font-bold"><Zap className="size-3.5 text-primary" /> DISCOM Consumer No</span>
+                  <p className="font-bold text-primary font-mono">{user.consumer_no || 'Not Linked'}</p>
+                </div>
               </div>
+
             ) : (
               <form onSubmit={handleSave} className="space-y-4 text-xs">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -181,7 +190,19 @@ export default function Profile() {
                       placeholder="e.g. Bengaluru, Karnataka"
                     />
                   </div>
+                  <div className="space-y-1.5 md:col-span-2">
+                    <label htmlFor="consumer-no-input" className="text-on-surface-variant font-semibold">DISCOM Account / Consumer Number</label>
+                    <input
+                      id="consumer-no-input"
+                      type="text"
+                      className="w-full bg-surface-container-high border border-outline-variant/50 rounded-lg px-3 py-2 text-on-surface focus:outline-none focus:border-primary transition-colors text-xs font-mono"
+                      value={formData.consumer_no}
+                      onChange={(e) => setFormData(prev => ({ ...prev, consumer_no: e.target.value }))}
+                      placeholder="e.g. 1000123456"
+                    />
+                  </div>
                 </div>
+
 
                 <div className="flex gap-2 justify-end pt-2">
                   <button
