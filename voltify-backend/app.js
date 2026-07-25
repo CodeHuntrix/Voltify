@@ -14,6 +14,7 @@ const leaderboardRoutes  = require('./src/routes/leaderboard.routes');
 const notificationRoutes = require('./src/routes/notification.routes');
 const profileRoutes      = require('./src/routes/profile.routes');
 const settingsRoutes     = require('./src/routes/settings.routes');
+const discomRoutes       = require('./src/routes/discom.routes');
 
 const errorHandler = require('./src/middleware/errorHandler');
 const passport = require('./src/config/passport');
@@ -74,6 +75,7 @@ app.use('/api/leaderboard',   leaderboardRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/profile',       profileRoutes);
 app.use('/api/settings',      settingsRoutes);
+app.use('/api/discom',        discomRoutes);
 
 // ───────────────────────────────
 // 404 HANDLER

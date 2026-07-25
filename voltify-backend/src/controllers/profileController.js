@@ -10,10 +10,11 @@ const getProfile = async (req, res) => {
   try {
     const userResult = await pool.query(
       `SELECT id, name, email, tier, household_type, location, home_type,
-              coins, streak_days, onboarding_complete, created_at
+              coins, streak_days, onboarding_complete, created_at, consumer_no, meter_type
        FROM users WHERE id = $1`,
       [userId]
     );
+
     user = userResult.rows[0];
   } catch (err) {
     console.error('Error fetching user from DB:', err);
@@ -166,6 +167,15 @@ const updateProfile = async (req, res) => {
     updates.push(`home_type = $${i++}`);
     values.push(home_type);
   }
+  if (req.body.consumer_no !== undefined) {
+    updates.push(`consumer_no = $${i++}`);
+    values.push(req.body.consumer_no ? req.body.consumer_no.trim() : null);
+    if (req.body.consumer_no) {
+      updates.push(`meter_type = $${i++}`);
+      values.push('smart');
+    }
+  }
+
 
   if (updates.length === 0) {
     return res.status(400).json({ error: 'No fields to update' });
@@ -173,9 +183,10 @@ const updateProfile = async (req, res) => {
 
   values.push(userId);
   const result = await pool.query(
-    `UPDATE users SET ${updates.join(', ')} WHERE id = $${i} RETURNING id, name, email, location, home_type`,
+    `UPDATE users SET ${updates.join(', ')} WHERE id = $${i} RETURNING id, name, email, location, home_type, consumer_no, meter_type`,
     values
   );
+
 
   return res.status(200).json({ success: true, user: result.rows[0] });
 };
