@@ -91,13 +91,6 @@ export default function Leaderboard() {
           <h1 className="font-display font-semibold text-3xl tracking-tight text-gradient">🏆 REGIONAL LEADERBOARD</h1>
           <p className="text-sm text-on-surface-variant">Compare savings parameters against neighboring homes in your active district</p>
         </div>
-        <div className="flex items-center gap-1 bg-surface-container-high/60 border border-outline-variant/30 px-4 py-2 rounded-xl text-xs">
-          <Trophy className="size-4 text-tertiary" />
-          <span className="text-on-surface-variant">Rank:</span>
-          <span className="font-mono font-bold text-tertiary">
-            #{board.findIndex(e => e.is_current_user) !== -1 ? board.findIndex(e => e.is_current_user) + 1 : 'N/A'} in sector
-          </span>
-        </div>
       </div>
 
 

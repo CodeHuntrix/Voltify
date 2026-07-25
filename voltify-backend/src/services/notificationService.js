@@ -29,9 +29,7 @@ const getByUserId = async (userId) => {
     return result.rows;
   } catch (err) {
     console.error('Error fetching notifications from DB:', err.message);
-    return [
-      { id: 'n1', type: 'usage_spike', title: '⚠ Usage Spike', message: 'Your AC is running 3.2 hours longer than normal.', read: false, action_url: '/predictions', created_at: new Date().toISOString() }
-    ];
+    return [];
   }
 };
 

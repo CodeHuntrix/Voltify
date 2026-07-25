@@ -300,6 +300,7 @@ export default function Onboarding() {
   const [showCustomModal, setShowCustomModal] = useState(false);
   const [customName, setCustomName] = useState('');
   const [customUsage, setCustomUsage] = useState<'low' | 'medium' | 'average'>('low');
+  const [customPower, setCustomPower] = useState<'low' | 'medium' | 'high'>('low');
   const [meterType, setMeterType] = useState<'basic' | 'smart' | 'estimate' | null>(null);
   const [discomNumber, setDiscomNumber] = useState('');
   const [isFetchingSmart, setIsFetchingSmart] = useState(false);
