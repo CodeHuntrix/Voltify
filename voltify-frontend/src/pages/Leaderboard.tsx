@@ -235,7 +235,7 @@ export default function Leaderboard() {
       </div>
 
       {/* Centralized Comfort-Safe Savings (CSS) Recommendations */}
-      <div className="max-w-4xl mx-auto pt-4">
+      <div className="w-full pt-4">
         <GlassCard className="space-y-6">
           <div className="flex items-center justify-between border-b border-white/5 pb-4">
             <div className="flex items-center gap-2.5">
