@@ -514,10 +514,9 @@ export default function Dashboard() {
       </div>
 
       {/* Grid: Daily Usage Chart & Appliance breakdown */}
-      <div className="space-y-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Daily/Weekly/Monthly Usage Chart */}
-        <GlassCard className="w-full flex flex-col justify-between">
-
+        <GlassCard className="col-span-1 lg:col-span-2 flex flex-col justify-between">
           <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4 mb-4">
             <div>
               <h3 className="font-display font-semibold text-lg text-on-surface">Energy Consumption Index</h3>
@@ -565,8 +564,7 @@ export default function Dashboard() {
         </GlassCard>
 
         {/* Premium Progressive Donut & Allocation Matrix (Re-introducing elegant interactive Pie Chart) */}
-        <GlassCard className="w-full flex flex-col justify-between">
-
+        <GlassCard className="flex flex-col h-full justify-between">
           <div>
             <div className="flex justify-between items-center mb-1">
               <h3 className="font-display font-semibold text-lg text-on-surface">Appliance Allocation Index</h3>

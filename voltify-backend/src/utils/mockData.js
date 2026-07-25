@@ -34,14 +34,17 @@ const mockLeaderboardUsers = {
   ],
 };
 
-/**
- * Coin shop items
- */
 const coinShopItems = [
-  { id: 'shop-1', coins_required: 100,  reward: '₹50 Amazon Voucher',      description: 'Redeemable on amazon.in' },
-  { id: 'shop-2', coins_required: 250,  reward: '₹150 Smart Plug Coupon',  description: 'TP-Link or Philips plug' },
-  { id: 'shop-3', coins_required: 500,  reward: '₹500 Bill Credit',        description: 'Credited to your electricity account' },
-  { id: 'shop-4', coins_required: 1000, reward: '₹1,200 Smart Meter Voucher', description: 'Upgrade to Tier 2 free' },
+  { id: 'shop-1', coins_required: 20,  reward: '🔌 Smart Plug',            description: 'Get ₹20 off a TP-Link/Wipro smart plug' },
+  { id: 'shop-2', coins_required: 25,  reward: '💡 Smart LED Bulbs',       description: '₹25 off Philips/Wipro LED bulbs' },
+  { id: 'shop-3', coins_required: 40,  reward: '🔋 Power Bank',            description: '₹40 off selected power banks' },
+  { id: 'shop-4', coins_required: 30,  reward: '⚡ Extension Board',       description: '₹30 off surge-protected extension boards' },
+  { id: 'shop-5', coins_required: 150, reward: '🌬️ BLDC Ceiling Fan',      description: '₹150 off energy-efficient BLDC fans' },
+  { id: 'shop-6', coins_required: 250, reward: '📊 Smart Energy Meter',    description: '₹250 off a compatible smart meter' },
+  { id: 'shop-7', coins_required: 75,  reward: '🔆 Solar Garden Lights',   description: '₹75 off solar-powered lights' },
+  { id: 'shop-8', coins_required: 200, reward: '🔋 UPS/Inverter Battery',  description: '₹200 off selected batteries' },
+  { id: 'shop-9', coins_required: 300, reward: '🏠 Home Automation Kit',   description: '₹300 off smart home starter kits' },
+  { id: 'shop-10', coins_required: 500, reward: '💸 Electricity Bill Credit', description: '₹500 discount on your electricity bill' },
 ];
 
 /**
