@@ -483,4 +483,37 @@ export const apiService = {
   async deleteAccount() {
     return fetchApi('/settings/account', { method: 'DELETE' }, { success: true, message: 'Account deleted' });
   },
+
+  // ── DISCOM / Smart Meter ─────────────────────────────────────────────────
+
+  /** Verify consumer number with DISCOM API */
+  async verifyDiscomConsumer(consumer_no: string) {
+    return fetchApi(`/discom/verify/${consumer_no}`, {});
+  },
+
+  /** Link this user to a smart meter consumer number */
+  async linkDiscomMeter(consumer_no: string) {
+    return fetchApi('/discom/link', { method: 'POST', body: JSON.stringify({ consumer_no }) }, { success: true, consumer_no });
+  },
+
+  /** Get current user's DISCOM linkage status */
+  async getDiscomStatus() {
+    return fetchApi('/discom/me', {}, { linked: false, consumer_no: null, meter_no: null });
+  },
+
+  /** Get latest live meter reading */
+  async getDiscomLiveReading() {
+    return fetchApi('/discom/live', {}, null);
+  },
+
+  /** Get chart data for smart meter: period = hourly | daily | weekly */
+  async getDiscomChart(period: 'hourly' | 'daily' | 'weekly') {
+    return fetchApi(`/discom/chart?period=${period}`, {}, { period, data: [] });
+  },
+
+  /** Run anomaly detection on user's smart meter data */
+  async getDiscomAnomalies() {
+    return fetchApi('/discom/anomaly', {}, { anomaly_count: 0, anomalies: [], total_readings: 0, anomaly_rate: 0 });
+  },
 };
+

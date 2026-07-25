@@ -11,4 +11,7 @@ export interface User {
   coins: number;
   streak_days: number;
   created_at: string;
+  consumer_no?: string;
+  meter_type?: 'basic' | 'smart';
 }
+
