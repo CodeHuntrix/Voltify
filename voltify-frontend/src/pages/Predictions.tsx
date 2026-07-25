@@ -290,7 +290,7 @@ export default function Predictions() {
       </div>
 
       {/* Interactive What-If Simulator */}
-      <div className="max-w-4xl mx-auto">
+      <div className="w-full">
         <GlassCard className="space-y-6">
           <div className="flex items-center gap-2.5 border-b border-white/5 pb-4">
             <div className="size-8 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center">
