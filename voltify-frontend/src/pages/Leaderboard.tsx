@@ -94,9 +94,12 @@ export default function Leaderboard() {
         <div className="flex items-center gap-1 bg-surface-container-high/60 border border-outline-variant/30 px-4 py-2 rounded-xl text-xs">
           <Trophy className="size-4 text-tertiary" />
           <span className="text-on-surface-variant">Rank:</span>
-          <span className="font-mono font-bold text-tertiary">#{rank} in sector</span>
+          <span className="font-mono font-bold text-tertiary">
+            #{board.findIndex(e => e.is_current_user) !== -1 ? board.findIndex(e => e.is_current_user) + 1 : 'N/A'} in sector
+          </span>
         </div>
       </div>
+
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Rankings Table */}
@@ -159,30 +162,37 @@ export default function Leaderboard() {
             </h3>
             
             <div className="space-y-3 text-xs font-sans">
-              <div className="border border-outline-variant/30 p-3 rounded-lg flex justify-between items-center">
+              <div className={`border border-outline-variant/30 p-3 rounded-lg flex justify-between items-center ${user?.streak_days >= 7 ? '' : 'opacity-60'}`}>
                 <div>
                   <h4 className="font-semibold text-on-surface">7-Day Saver</h4>
                   <p className="text-[10px] text-on-surface-variant">Unlock 1.15x Saving Multiplier</p>
                 </div>
-                <span className="text-[10px] bg-primary/20 text-primary font-mono px-2 py-0.5 rounded uppercase font-bold">Active</span>
+                <span className={`text-[10px] font-mono px-2 py-0.5 rounded uppercase font-bold ${
+                  user?.streak_days >= 7 ? 'bg-primary/20 text-primary' : 'bg-outline-variant/30 text-outline'
+                }`}>{user?.streak_days >= 7 ? 'Active' : 'Locked'}</span>
               </div>
 
-              <div className="border border-outline-variant/30 p-3 rounded-lg flex justify-between items-center opacity-60">
+              <div className={`border border-outline-variant/30 p-3 rounded-lg flex justify-between items-center ${user?.streak_days >= 30 ? '' : 'opacity-60'}`}>
                 <div>
                   <h4 className="font-semibold text-on-surface">30-Day Sovereign</h4>
                   <p className="text-[10px] text-on-surface-variant">Unlock 1.35x Saving Multiplier</p>
                 </div>
-                <span className="text-[10px] bg-outline-variant/30 text-outline font-mono px-2 py-0.5 rounded uppercase font-bold">Locked</span>
+                <span className={`text-[10px] font-mono px-2 py-0.5 rounded uppercase font-bold ${
+                  user?.streak_days >= 30 ? 'bg-primary/20 text-primary' : 'bg-outline-variant/30 text-outline'
+                }`}>{user?.streak_days >= 30 ? 'Active' : 'Locked'}</span>
               </div>
 
-              <div className="border border-outline-variant/30 p-3 rounded-lg flex justify-between items-center opacity-60">
+              <div className={`border border-outline-variant/30 p-3 rounded-lg flex justify-between items-center ${user?.streak_days >= 90 ? '' : 'opacity-60'}`}>
                 <div>
                   <h4 className="font-semibold text-on-surface">90-Day Grid Master</h4>
                   <p className="text-[10px] text-on-surface-variant">Unlock 1.6x Saving Multiplier</p>
                 </div>
-                <span className="text-[10px] bg-outline-variant/30 text-outline font-mono px-2 py-0.5 rounded uppercase font-bold">Locked</span>
+                <span className={`text-[10px] font-mono px-2 py-0.5 rounded uppercase font-bold ${
+                  user?.streak_days >= 90 ? 'bg-primary/20 text-primary' : 'bg-outline-variant/30 text-outline'
+                }`}>{user?.streak_days >= 90 ? 'Active' : 'Locked'}</span>
               </div>
             </div>
+
           </GlassCard>
 
           <GlassCard className="space-y-4">

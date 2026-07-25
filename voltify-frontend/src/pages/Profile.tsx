@@ -249,20 +249,21 @@ export default function Profile() {
                 </h3>
                 <p className="text-xs text-on-surface-variant">Calibrate smart saving settings to gain more points.</p>
               </div>
-              {/* Fake progress bar */}
+              {/* Dynamic progress bar based on tier */}
               <div className="space-y-1.5">
                 <div className="w-full bg-surface-container-high rounded-full h-2 overflow-hidden border border-outline-variant/30">
                   <div 
                     className="bg-rose-500 h-full rounded-full transition-all duration-500"
-                    style={{ width: user.tier === 3 ? '78%' : user.tier === 2 ? '45%' : '18%' }}
+                    style={{ width: `${(user.tier / 3) * 100}%` }}
                   />
                 </div>
                 <div className="flex justify-between text-[10px] font-mono text-on-surface-variant">
-                  <span>{user.tier === 3 ? '15,600 XP' : user.tier === 2 ? '4,500 XP' : '800 XP'}</span>
-                  <span>{user.tier === 3 ? '20,000 XP' : user.tier === 2 ? '10,000 XP' : '5,000 XP'}</span>
+                  <span>Current Tier: {user.tier}</span>
+                  <span>Max Tier: 3</span>
                 </div>
               </div>
             </div>
+
           </GlassCard>
 
           {/* Wallet Balance Info */}
@@ -285,7 +286,7 @@ export default function Profile() {
                 </div>
                 <div>
                   <p className="text-2xl font-bold font-mono text-rose-400">{user.streak_days || 0} DAYS</p>
-                  <p className="text-[10px] text-on-surface-variant">Streak Multiplier: <span className="text-rose-400 font-semibold">1.15x</span></p>
+                  <p className="text-[10px] text-on-surface-variant">Active Streak Tracked</p>
                 </div>
               </div>
             </div>
